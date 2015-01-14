@@ -1,0 +1,83 @@
+Module to create and use KD-trees: 
+all you need for your neighbour searches.
+
+This is a python interface to a c code. It can compute
+a kdtree given a set of coordinates, which can be used
+to determine nearest neighbours, make radius search, etc.
+
+How to make it work:
+
+If you have sudo permissions:
+    - "sudo make" in the cPkdtree directory
+    
+    - Test the tree by running kdtree.py
+      -> python kdtree.py
+      This should launch a test of locatenear.
+    
+    - Try to import the module from anywhere:
+      Launch a python interpreter in any directory
+      and import kdtree.
+    
+    - If everything worked, you're all set
+
+
+If you don't have sudo permissions:
+
+    - Add to your .bashrc:
+      "export LD_LIBRARY_PATH = [path to cPykdtree directory]:$LD_LIBRARY_PATH"
+      Then source it: "source ~/.bashrc"
+    
+    - "make local" in the cPykdtree directory.
+    
+    - Update the lib_path variable in kdtree.py to point to the new
+      libkdtree.so as an absolute path. Example:
+           path = /home/dorval/cPykdtree/libkdtree.so
+    
+    - Place kdtree.py in a directory available to python, or update PYTHONPATH:
+      export PYTHONPATH = [ path to cPykdtree directory]: $PYTHONPATH
+      ( to be added to your .bashrc, then sourced )
+    
+    - Test the tree by running kdtree.py
+      -> python kdtree.py
+      This should launch a test of locatenear.
+    
+    - Try to import the module from anywhere:
+      Launch a python interpreter in any directory
+      and import kdtree.
+    
+    - If everything worked, you're all set.
+
+
+You can consult the documentation of "Tree" in the module kdtree for an
+explanation on how to use the module.
+
+The c module can be used without the python interface. To do so, if you didn't build
+the libraries with sudo permissions, you should add the src/ directory
+to the CPATH variable in your .bashrc, much like you did for LD_LIBRARY_PATH.
+
+In your c program, simply include kdtree.h and/or argsort.h, then compile by adding
+at the end of the compile command
+   -lm -lsort
+if using only the sort functions
+   -lm -lsort -lkdtree
+if using both, or only the kdtree.
+
+Words of warning: 
+- If you want to build a tree with more than ~10M particles, you could 
+  get into memory trouble (but you probably already are if you're working 
+  with this kind of set). The tree was tested on 280M particles and seemed
+  to work (using float) on a 64Gb memory computer.
+ 
+- The locatenear function has a limit in the number of neighbours it finds.
+  The default value is 10k but it can be set as a keyword argument. So if you
+  find exactly 10000 neighbours, don't buy a lottery ticket just yet.
+
+
+June 2014
+
+Python code: Julien Dorval.
+
+C code: Adapted from c++ to c by Julien Dorval. 
+        Original c++ code from Numerical Recipees(3rd edition)
+
+Any questions: dorvaljulien@gmail.com
