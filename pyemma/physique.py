@@ -60,7 +60,7 @@ def m2mo(m,folder) :
 	"""
 	c = Constantes()
 
-	param = IO.Params(folder = folder).get()
+	param = IO.ParamsInfo(folder = folder).get()
 
 	unit_m = float(param["unit_mass"])
 	unit_m /= c.MO
@@ -74,3 +74,5 @@ def Cell2Meter(args):
 	L = float(param["unit_l"])/3.085677e16
 	dx = pow(2,- args.level)*L
 	return dx
+	
+	

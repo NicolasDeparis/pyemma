@@ -9,18 +9,67 @@ class Params:
 		with open(filename) as f:
 			for line in f:
 				(key, val) = line.split()
-				self.d[key] = val					
-
+				self.d[key] = val				
 	def get(self):
 		return self.d
+		
+		
+class ParamsInfo:
+	def __init__(self,folder = "data"):
+		filename = "%sparam.info"%folder
+		self.d = {}
+		with open(filename) as f:
+			for line in f:
+				(key, val) = line.split()				
+				self.d[key] = float(val)
+	def get(self):
+		return self.d
+		
+class ParamsRun:
+	def __init__(self,folder = "data"):
+		filename = "%sparam.run"%folder
+		self.d = {}
+		with open(filename) as f:
+			for line in f:				
+				if line[0]!="#":
+					(key, val) = line.split()					
+					self.d[key] = val
+	def get(self):
+		return self.d
+		
+class StepAvg:
+	"""
+	step, aexp, z, max_level,max_rho,mean_xion,mean_T,max_T,stars,sfr
+	"""
+	def __init__(self,folder = "data"):
+		filename = "%sstep.avg"%folder
+	
+		
+		self.data= np.loadtxt(filename,skiprows=1,unpack=True)
+	def get(self):
+		return self.data
+		
+		
+def printparam(folder):
+	d = Params(folder).get()
+	for key in d:
+		print  key, d[key]
+
+def comparParam(f1,f2):
+	P1 = Params(f1).get()
+	P2 = Params(f2).get()
+	for key in P1:
+		if not P1[key] == P2[key]:
+			print key, P1[key], P2[key]
 
 def splitPath(filepath):
 	all_path = filepath.split("/") 
 	filename = all_path[-1]
-	folder = "/".join(all_path[:-1])
+	folder = "/".join(all_path[:-1]) + "/"	
+
 	return folder, filename
 	
-def getNproc(filepath="data/grid.00000"):
+def getNproc(filepath):
 	folder, filename = splitPath(filepath)
 	files = os.listdir(folder)
 	nProc =0
@@ -41,4 +90,10 @@ def getargs() :
 	args = parser.parse_args()
 	return args
 
+
+def readParamInfo(folder):
+		return ParamsInfo(folder).get()
+
+def readParamRun(folder):
+		return ParamsRun(folder).get()
 

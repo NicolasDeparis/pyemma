@@ -1,5 +1,5 @@
 import numpy as np
-import os
+import sys,os
 
 import IO
 
@@ -22,13 +22,10 @@ def genHopFiles(filename):
 		print commande
 		os.system(commande)
 
-
 	try :
 		file = open(outname + ".tag", "rb")
 		file.close()
 	except  IOError:
-		#-douter 80. -dsaddle 200. -dpeak 240.
-		#-douter 20. -dsaddle 35. -dpeak 50.
 		commande =  "./" + folder + "regroup -root %s -douter 80. -dsaddle 200. -dpeak 240. -f77 -o %s"%(outname,outname)
 		print commande
 		os.system(commande)
@@ -55,8 +52,8 @@ def readTag(filename):
 	file = open(tagname, "rb")
 	print "Reading file", tagname
 
-	dummy 	= np.fromfile(file, dtype=np.int32   ,count=1)
-	npart 	= np.fromfile(file, dtype=np.int32   ,count=1)[0]
+	dummy 	= np.fromfile(file, dtype=np.int32   ,count=1)	
+	npart 	= np.fromfile(file, dtype=np.int32   ,count=1)[0]	
 	ngrp 	= np.fromfile(file, dtype=np.int32   ,count=1)[0]
 	dummy 	= np.fromfile(file, dtype=np.int32   ,count=1)
 	dummy 	= np.fromfile(file, dtype=np.int32   ,count=1)

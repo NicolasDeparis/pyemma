@@ -2,6 +2,7 @@
 import os, sys
 import numpy as np
 from pyemma  import *
+
 import matplotlib.pylab as plt
 from math import sqrt
 import threading
@@ -33,15 +34,19 @@ def solution(level):
 	plt.plot(x,y,label='analytical')
 	
 def plot_xft(args):
-	data = readAllProfil(folder = args.folder)	
+	data = profile.readAllProfil(folder = args.folder)	
 	t = amr.gettmap(folder = args.folder)
-	unit = Cell2Meter(args)
-	y = findFrontPosition(data)
-	y = np.multiply(y,unit)
+	for set in data:
+		plt.plot(set[0],set[1])
+	plt.show()
+
+	unit = physique.Cell2Meter(args)
+	y = profile.findFrontPosition(data)
+	#y = np.multiply(y,unit)
 
 	plt.plot(t[1:],y[1:])
-	plt.xlim(0,90)
-	plt.ylim(0,600)
+	#plt.xlim(0,90)
+	#plt.ylim(0,600)
 	plt.ylabel(r'position (pc)')
 	plt.xlabel(r'time (Myr)')
 		
@@ -88,8 +93,7 @@ if __name__ == "__main__":
 #	for folder in folders:
 #		args.folder=folder
 
-#	getAllProfil(args, folder = args.folder)
-#	plotAllProfil(args)
+	profile.getAllProfil(args, folder = args.folder)
 
 	plot_xft(args)
 	#plot_vft(args)

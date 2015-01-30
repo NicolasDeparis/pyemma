@@ -26,8 +26,8 @@ def plotAnimProfil(args):
 	for i in range(len(data)):
 		plt.clf()
 			
-		plt.semilogy(np.multiply(data[i][0], unit), data[i][1] , label="with SN")
-		plt.semilogy(np.multiply(data2[i][0], unit2),data2[i][1], label="without SN")
+		plt.semilogy(np.multiply(data[i][0],unit), data[i][1], label="with SN")
+		plt.semilogy(np.multiply(data2[i][0],unit2),data2[i][1], label="without SN")
 		
 		plt.ylabel(r'delta rho')
 		plt.xlabel(r'R (kpc)')

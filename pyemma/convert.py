@@ -3,7 +3,7 @@ import numpy as np
 
 from struct import *
 
-from part import *
+import part 
 from physique import *
 from amr import *
 
@@ -12,7 +12,7 @@ def star2obj(filename):
 		Convert EMMA star file to one standard .obj file.
 	"""
 
-	N,a,parts = readPart(filename)
+	N,a,parts = part.read(filename)
 	t = a2t(a)
 
 	scale = 64
@@ -220,7 +220,7 @@ def field2ID(field="field.d"):
 	return f
 
 
-def oct2grid(data,level, force=0, nproc=IO.getNproc(), field="field.d", xmin=0, xmax=-1, ymin=0, ymax=-1, zmin=0, zmax=-1, silo=0):
+def oct2grid(data,level, force=0, nproc=0, field="field.d", xmin=0, xmax=-1, ymin=0, ymax=-1, zmin=0, zmax=-1, silo=0, proj=0):
 	"""
 		Parser for oct2grid
 	"""
@@ -233,7 +233,9 @@ def oct2grid(data,level, force=0, nproc=IO.getNproc(), field="field.d", xmin=0, 
 	if zmax == -1 :
 		zmax = N
 		
-
+	if nproc==0:
+		nproc= IO.getNproc(filepath=data)
+		
 	f = field2ID(field)
 
 	print "********** Oct2grid **********"
@@ -244,7 +246,6 @@ def oct2grid(data,level, force=0, nproc=IO.getNproc(), field="field.d", xmin=0, 
 
 	
 	dx =pow(2.,-level)  
-	
 	
 	xmin *= (xmin>1)*dx + (xmin<=1)
 	xmax *= (xmax>1)*dx + (xmax<=1)
@@ -271,13 +272,47 @@ def oct2grid(data,level, force=0, nproc=IO.getNproc(), field="field.d", xmin=0, 
 							str(ymin) + " " + 
 							str(ymax) + " " + 
 							str(zmin) + " " + 
-							str(zmax)  )
+							str(zmax) + " " + 
+							str(proj) )
 
 	if os.path.isfile(out):
-		print "oct2grid : file allready exist"
+		print "oct2grid : file %s allready exist"%out
 		if force:
 			print "but do it anyway!"
 			os.system(commande)
 	else :
 		os.system(commande)
 
+def oct2cell(data, force=0, nproc=0, field="field.d", xmin=0, xmax=-1, ymin=0, ymax=-1, zmin=0, zmax=-1, silo=0):
+	"""
+		Parser for oct2cell
+	"""
+	if nproc==0:
+		nproc=IO.getNproc(data)
+
+	f = field2ID(field)
+
+	print "********** Oct2cell **********"
+	print "File = ", data
+	print "Field = ", field
+	print "******************************"
+
+	o2g  = "utils/alloct "
+	
+	out  = data.replace("grid","alloct") + "." + field
+	commande = (o2g + " " + 
+							data + " " +  
+							str(100) + " "  + 
+							str(f) + " " + 
+							out + " " + 
+							str(nproc) + " " + 
+							str(silo) + 
+							" -1 " )
+
+	if os.path.isfile(out):
+		print "oct2cell : file %s allready exist"%out
+		if force:
+			print "but do it anyway!"
+			os.system(commande)
+	else :
+		os.system(commande)

@@ -14,13 +14,12 @@ def readAll(filename):
 
 	npartden, den       = hop.readDen(filename)
 	nparttag, ngrp, tag = hop.readTag(filename)
-	npart,a,par        = part.read(filename)
-	nstar,a,star        = part.read(filename)
+	npart,a,par         = part.read(filename)
+	nstar,a,star        = part.read(filename.replace("part","star"))
 
 	return den, tag, par, star, nstar, a,ngrp
 
 def getCenter(halo, den):
-
 	mask = np.argmax(den)
 	x  = halo.x[mask]
 	y  = halo.y[mask]
@@ -28,13 +27,11 @@ def getCenter(halo, den):
 	
 	return np.array((x,y,z), dtype = np.float32)
 	
-def getRvir(halo):		
-
+def getRvir(halo):
 	M = np.sum(halo.mass)
-	return np.power(3.*M/(800*np.pi),1./3.)
+	return np.power(3.*M/(200.*4.*np.pi),1./3.)
 
 def getHalo(par, tag, den, HALO):
-
 	mask  = np.where(tag == HALO)
 	nmask = len(mask[0])
 
@@ -55,10 +52,10 @@ def findStar(center,Rvir, star, tree):
 	starshalo = part.Part(nmask3,1)
 
 	if nmask3 != 0:
-		print nmask3
-		starshalo.mask(star,mask3)
+		starshalo.mask(star,mask3)	
 
 	return starshalo, np.array(mask3, dtype = np.int32)
+	
 	
 def genHaloFiles(file):
 
@@ -100,12 +97,18 @@ def genHaloFiles(file):
 			nstarhalo[HALO] = len(mask[HALO])
 			Mh[HALO] = np.sum(halo.mass)
 			Ms[HALO] = np.sum(starHalo.mass)
+	
+	
+		t3 = time.time()	
+		print "Computation OK"
+		print "Lecture", t1-t0
+		print "tree",    t2-t1	
+		print "Calcul",  t3-t2
 
 		outname = file[:-10]  + "halo" + file[-6:] + ".halo"
 		f = open(outname,'wb')		
 
 		ngrp.tofile(f)		
-
 		Rvir.tofile(f)
 		Mh.tofile(f)
 		Ms.tofile(f)
@@ -115,15 +118,11 @@ def genHaloFiles(file):
 			mask[i].tofile(f)			
 		f.close()
 
-		t3 = time.time()	
-
-		print "Computation OK"
-		print "Lecture", t1-t0
-		print "tree",    t2-t1	
-		print "Calcul",  t3-t2
 		
 		
 def readHaloFile(file):
+
+
 
 	outname = file[:-10]  + "halo" + file[-6:] + ".halo"
 	try :
@@ -132,23 +131,15 @@ def readHaloFile(file):
 		print outname, "not found"
 
 	ngrp = np.fromfile(f, dtype = np.int32, count = 1)		
-	print ngrp
-
+	print "Number of group %s"%ngrp
 	center   = np.empty((ngrp), dtype=np.object)
-	Rvir     = np.zeros( ngrp)
-	Mh       = np.zeros( ngrp)
-	Ms       = np.zeros( ngrp)	
-	N       = np.zeros( ngrp)	
 	mask     = np.empty((ngrp), dtype=np.object)
-
-
 	Rvir   = np.fromfile(f, dtype = np.float32, count =ngrp)
 	Mh     = np.fromfile(f, dtype = np.float32, count =ngrp)
 	Ms     = np.fromfile(f, dtype = np.float32, count =ngrp)
 	N      = np.fromfile(f, dtype = np.int32,   count =ngrp)
 
 	for i in range(ngrp):
-	
 		center[i] = np.fromfile(f, dtype = np.float32, count = 3)
 		mask[i]   = np.fromfile(f, dtype = np.int32, count =N[i])			
 
@@ -157,16 +148,18 @@ def readHaloFile(file):
 
 	return center,Rvir,Mh,Ms,N,mask
 
-def Ms_f_Mh(Mh0,Ms0):
+def Ms_f_Mh(Mh0,Ms0,folder):
 
-		param =  "../krusty/Quartz/data/wSN7/"
-		Mh = physique.m2mo(Mh0,param)
-		Ms = physique.m2mo(Ms0,param)
+		Mh = physique.m2mo(Mh0,folder)
+		Ms = physique.m2mo(Ms0,folder)
 
+		"""
 		print Mh
 		print Ms
-
-		b = 16
+		"""
+		
+		"""
+		b = 2
 		n0, bins0 = np.histogram(Mh,bins=b)
 		n1, bins1 = np.histogram(Ms,bins=b)
 		
@@ -176,13 +169,13 @@ def Ms_f_Mh(Mh0,Ms0):
 		for i in range(b):
 			x[i] = n0[i] * bins0[i] #+ ( bins0[i+1] - bins0[i] )/2.
 			y[i] = n1[i] * bins1[i] #+ ( bins1[i+1] - bins1[i] )/2.
-
-		print x,y
+		"""
+						
 		plt.clf()
 		plt.loglog(Mh,Ms,'.')
-		plt.title("Stars mass function of halo mass ")
-		plt.xlabel(r'halo mass (M0)')
-		plt.ylabel(r'stars mass (M0)')
+		plt.title("Stars mass function of halo mass")
+		plt.xlabel(r'halo mass ($M_{\odot}$ )')
+		plt.ylabel(r'stars mass ($M_{\odot}$ )')
 
 		plt.legend()
 		plt.show(block=False)
@@ -216,24 +209,7 @@ def plotHalo(file):
 
 	plt.show(block=False)
 	
-def getResolution(file):
-	
-	folder,filename = IO.splitPath(file)
-	folder +="/"
-	
-	nstar,a,star = part.read(file)
-	print "number of stars : %s"%str(nstar)
-	L=10
-	resmstarmin = physique.m2mo(np.min(star.mass),folder)
-	resmstarmax = physique.m2mo(np.min(star.mass),folder)
-	print "mass star = %s -> %s "%(str(resmstarmin),str(resmstarmin))
 
-	file=file.replace("star","part")
-	npart,a,par = part.read(file)
-	print "number of DM part : %s"%str(npart)
-	L=10
-	resmpar = physique.m2mo(np.min(par.mass),folder)
-	print "mass of DM star = %s"%str(resmpar)
 
 
 

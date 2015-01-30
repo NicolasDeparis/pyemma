@@ -62,29 +62,14 @@ class Part :
 			self.age 	= part.age[ma]	
 
 	def append(self, part):
-
-		for i in range(len(part)):
-
-			self.x 		= np.append(self.x, part[i].x)
-			self.y 		= np.append(self.y, part[i].y)
-			self.z 		= np.append(self.z, part[i].z)
-
-			'''
-			self.vx 	= part.vx[ma]
-			self.vy 	= part.vy[ma]
-			self.vz 	= part.vz[ma]
-
-			self.idx 	= part.idx[ma]
-			'''
-			self.mass	= np.append(self.mass, part[i].mass)
-			'''			
-			self.epot 	= part.epot[ma]
-			self.ekin 	= part.ekin[ma]
-			'''
-			if self.isStar :
-				self.age 	= np.append(self.age, part[i].age)
-
-
+		self.x = np.append(self.x, part.x)		
+		self.y = np.append(self.y, part.y)
+		self.z = np.append(self.z, part.z)
+		self.mass = np.append(self.mass, part.mass)
+		if self.isStar :
+			self.age = np.append(self.age, part.age)
+			
+		
 def getN(filename):
 	filePart = open(filename, "rb")
 	N 	= np.fromfile(filePart, dtype=np.int32  ,count=1)[0]
@@ -97,6 +82,15 @@ def getNtot(filename, nProc):
 		Ntot += getN(filename + ".p" + str(proc).zfill(5))
 
 	return Ntot
+
+def read1proc(filename):
+	file = open(filename, "rb")	
+	N = np.fromfile(file, dtype=np.int32  ,count=1)[0]
+	a = np.fromfile(file, dtype=np.float32,count=1)[0]
+	data = np.fromfile(file, dtype=np.float32)
+	file.close()
+
+	return N,a,data
 
 def read(filename):
 	
@@ -116,12 +110,8 @@ def read(filename):
 	i = 0
 	for proc in range(nProc):
 
-		file = open(filename + ".p"+ str(proc).zfill(5)	, "rb")	
-		N = np.fromfile(file, dtype=np.int32  ,count=1)[0]
-		a = np.fromfile(file, dtype=np.float32,count=1)[0]
-		data = np.fromfile(file, dtype=np.float32)
-		file.close()
-
+		N,a,data=read1proc(filename + ".p"+ str(proc).zfill(5)	)
+	
 		for j in range(0,data.shape[0],s):
 			parts.define(data[j:j+s] ,i )
 			i+=1
@@ -129,3 +119,13 @@ def read(filename):
 	print 'Read OK'
 	return Ntot,a,parts
 
+def findFirstStar(file):
+	
+	Ntot,a,parts = read(file)
+		
+	ind = np.argmin(parts.age)
+	
+	print parts.x[ind]
+	print parts.y[ind]
+	print parts.z[ind]
+	

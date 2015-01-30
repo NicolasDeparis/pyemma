@@ -120,8 +120,8 @@ def comparMethod(args):
 
 def getAllProfil(args, folder = "data/", force=0, field='field.d'):
 
-	Nx,Ny,Nz = 64,64,64
-	xc,yc,zc = 32,32,32
+	Nx,Ny,Nz = 128,128,128
+	xc,yc,zc = 64,64,64
 	r = getR(Nx,Ny,Nz,xc,yc,zc)
 
 	files = np.sort(os.listdir(folder))
@@ -147,7 +147,6 @@ def plotAllProfil(data):
 	for set in data:
 		plt.plot(set[0],set[1])
 	plt.show()
-
 
 def findFrontPosition(data):
 	position = np.zeros(len(data))
