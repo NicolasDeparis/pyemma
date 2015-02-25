@@ -1,3 +1,5 @@
+v1.7
+
 Module to create and use KD-trees: 
 all you need for your neighbour searches.
 
@@ -9,8 +11,7 @@ How to make it work:
 
 If you have sudo permissions:
     - "sudo make" in the cPkdtree directory
-    - "sudo ldconfig"
-
+    
     - Test the tree by running kdtree.py
       -> python kdtree.py
       This should launch a test of locatenear.
@@ -20,6 +21,11 @@ If you have sudo permissions:
       and import kdtree.
     
     - If everything worked, you're all set
+
+/!\ If you encounter a "cannot open shared object" error, You might 
+want to run ldconfig to make sure the linker knows about the new 
+libraries. If that doesn't solve your problem, add /usr/local/lib to
+LD_LIBRARY_PATH in your .bashrc.
 
 
 If you don't have sudo permissions:
@@ -47,6 +53,8 @@ If you don't have sudo permissions:
       and import kdtree.
     
     - If everything worked, you're all set.
+
+
 
 
 You can consult the documentation of "Tree" in the module kdtree for an
@@ -79,6 +87,6 @@ June 2014
 Python code: Julien Dorval.
 
 C code: Adapted from c++ to c by Julien Dorval. 
-        Original c++ code from Numerical Recipees(3rd edition)
+        Original c++ code from Numerical Recipees (3rd edition)
 
 Any questions: dorvaljulien@gmail.com

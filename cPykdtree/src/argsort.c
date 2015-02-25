@@ -40,6 +40,7 @@ void sort(int n, FLOAT *arr, int *idx)
   {
       arr[j]=copy[idx[j]];
   }
+  free(copy);
 }
 
 
@@ -48,16 +49,17 @@ void permutation_FLOAT(int array_size, int *idx, int count, ...)
     va_list ap;
     int i,j;
     va_start (ap, count);         /* Initialize the argument list. */
+    FLOAT *copy = malloc(array_size * sizeof(FLOAT));
     for (i = 0; i < count; i++)
     {
         FLOAT *array = va_arg (ap, FLOAT*);    /* Get the next argument value. */
-        FLOAT *copy = malloc(array_size * sizeof(FLOAT));
         for(j=0;j<array_size;j++)
             copy[j]=array[j];
         for(j=0;j<array_size;j++)
             array[j]=copy[idx[j]];
     }   
-    va_end (ap);                  /* Clean up. */
+    va_end (ap);     /* Clean up. */
+    free(copy);
 }
 
 void permutation_int(int array_size, int *idx, int count, ...)
@@ -65,16 +67,17 @@ void permutation_int(int array_size, int *idx, int count, ...)
     va_list ap;
     int i,j;
     va_start (ap, count);         /* Initialize the argument list. */
+    int *copy = malloc(array_size * sizeof(int));
     for (i = 0; i < count; i++)
     {
         int *array = va_arg (ap, int*);    /* Get the next argument value. */
-        int *copy = malloc(array_size * sizeof(int));
         for(j=0;j<array_size;j++)
             copy[j]=array[j];
         for(j=0;j<array_size;j++)
             array[j]=copy[idx[j]];
     }   
     va_end (ap);                  /* Clean up. */
+    free(copy);
 }
 
 
@@ -82,27 +85,29 @@ void permutation_int(int array_size, int *idx, int count, ...)
 int main()
 {
 
-    /* int i,N=10; */
-    /* FLOAT *x = malloc(N * sizeof(FLOAT)); */
-    /* FLOAT *y = malloc(N * sizeof(FLOAT)); */
-    /* FLOAT *z = malloc(N * sizeof(FLOAT)); */
-    /* int *idx = malloc(N * sizeof(int)); */
+    int i,N=10;
+    FLOAT *x = malloc(N * sizeof(FLOAT));
+    FLOAT *y = malloc(N * sizeof(FLOAT));
+    FLOAT *z = malloc(N * sizeof(FLOAT));
+    int *idx = malloc(N * sizeof(int));
     
-    /* srand(time(NULL)); */
-    /* for (i=0;i<N;i++) */
-    /* {   x[i] = rand(); */
-    /*     y[i] = i; */
-    /*     z[i]=i*i; */
-    /* } */
+    srand(time(NULL));
+    for (i=0;i<N;i++)
+    {   x[i] = rand();
+        y[i] = i;
+        z[i]=i*i;
+    }
     
-    /* for (i=0;i<N;i++) */
-    /* { */
-    /*     printf("%f %f  %f\n",x[i],y[i],z[i]); */
-    /* } */
+    for (i=0;i<N;i++)
+    {
+        printf("%f %f  %f\n",x[i],y[i],z[i]);
+    }
 
-    /* sort(N,x,idx); */
-    /* permutation(N,idx,2,y,z); */
-    /* printf("Sorted.\n"); */
+    sort(N,x,idx);
+    permutation_FLOAT(N,idx,2,y,z);
+    printf("Sorted.\n");
+
+    free(x); free(y); free(z); free(idx);
 
     /* for (i=0;i<N;i++) */
     /* { */

@@ -15,7 +15,7 @@ def star2obj(filename):
 	N,a,parts = part.read(filename)
 	t = a2t(a)
 
-	scale = 64
+	scale = 1
 
 	file = open("star.obj", "w")
 
@@ -258,7 +258,7 @@ def oct2grid(data,level, force=0, nproc=0, field="field.d", xmin=0, xmax=-1, ymi
 	
 	o2g  = "utils/oct2grid "
 	
-	out  = data.replace("grid","cube"+ str(level)) + "." + field
+	out  = data.replace("grid.","cube"+ str(level) +".") + "." + field
 	commande = (o2g + " " + 
 							data + " " +  
 							str(level) + " "  + 
@@ -299,7 +299,7 @@ def oct2cell(data, force=0, nproc=0, field="field.d", xmin=0, xmax=-1, ymin=0, y
 
 	o2g  = "utils/alloct "
 	
-	out  = data.replace("grid","alloct") + "." + field
+	out  = data.replace("grid.","alloct.") + "." + field
 	commande = (o2g + " " + 
 							data + " " +  
 							str(100) + " "  + 

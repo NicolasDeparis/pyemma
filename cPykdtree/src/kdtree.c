@@ -275,6 +275,8 @@ void KDtree(FLOAT *coords, int N, int DIM, Tree *tree)
     	boxes[i].hi.DIM = DIM;
     	boxes[i].hi.x = &global_coords[ind]; ind += DIM;
     	boxes[i].lo.x = &global_coords[ind]; ind += DIM;
+	boxes[i].dau1 = 0;
+	boxes[i].dau2 = 0;
     }
 
     // Preparing the lo and hi reference Points
@@ -286,6 +288,7 @@ void KDtree(FLOAT *coords, int N, int DIM, Tree *tree)
     lo->x = &global_coords[ind]; ind+=DIM;
     hi->x = &global_coords[ind]; ind+=DIM;
     lo->DIM = hi ->DIM = DIM;
+    modify_Point(lo,xlo); modify_Point(hi,xhi);
     // First box:
     modify_Box(lo,hi,0,0,0,0,N-1,&boxes[0]);
     jbox = 0;
@@ -416,6 +419,8 @@ void read_tree(char *name, Tree *tree)
     	boxes[i].hi.DIM = DIM;
     	boxes[i].hi.x = &global_coords[ind]; ind += DIM;
     	boxes[i].lo.x = &global_coords[ind]; ind += DIM;
+	boxes[i].dau1 = 0;
+	boxes[i].dau2 = 0;
     }
 
     FLOAT *xlo = ALLOC(DIM, FLOAT, "xlo");
@@ -642,6 +647,7 @@ int locatenear(Tree tree, Point pt, FLOAT r, int *list, FLOAT *dn, int nmax)
 		if (nret == nmax){
 		    sort(nret,dn,idx);
 		    permutation_int(n,idx,1,list);
+		    free(idx);
 		    return nret;
 		} 
 	    }
