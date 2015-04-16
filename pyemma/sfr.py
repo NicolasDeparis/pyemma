@@ -8,35 +8,47 @@ import halo
 import kdtree as kd
 import param
 
-def getFromPop(stars,folder):
+def getFromPop(stars,Param):
 	
-	Nbins=8
+	Nbins=10
 
 	z=np.zeros(Nbins)
 	sfr=np.zeros(Nbins)		
 
-	p = param.ParamsInfo(folder = folder).get()
-	L = float(p["unit_l"])/3.085677e16 /1e6	
+	p = Param.info.get()
+	L = float(p["unit_l"])/3.085677e16/1e6
 	dv = pow(L,3)
 	
 	age_min = np.min(stars.age)
 	age_max = np.max(stars.age)
-	
+	dt = age_max - age_min
 	bins_edges = np.linspace(age_min,age_max,Nbins+1)
-	weights=physique.m2mo(stars.mass,folder)
+	weights=physique.m2mo(stars.mass,Param)
 	
-	sfr,bin_edges=np.histogram(stars.age,bins=bins_edges, weights=weights)
-	sfr/=np.diff(bin_edges)
+	mass = np.unique(weights)
+	if len(mass)!=2:
+		print "warning there an ambiquity about the masses of stars"
+		print "mass = ", mass
 	
+	mass = np.max(mass)
+	weights =0*weights+mass
+	
+	sfr,bin_edges=np.histogram(stars.age, bins=bins_edges, weights=weights)
+	sfr/=np.diff(bin_edges)*dv
+
 	z_all=physique.a2z(physique.t2a(bin_edges))
 	z=(z_all[1:]+z_all[:-1])/2		
 
+	
+	avg_sfr=len(stars.age)*mass/dt/dv
+	print "average SFR", avg_sfr
 	return z,sfr
 	
-def fromSnap_cpu(file, lab):
+def fromSnap_cpu(step, lab):
 
-	folder,filename = IO.splitPath(file)
-	nproc = IO.getNproc(file)
+#	folder,filename = IO.splitPath(file)
+
+	nproc = IO.getNproc(step.star_path)
 
 	param = param.ParamsInfo(folder = folder).get()
 	L = float(param["unit_l"])/3.085677e16 /1e6	
@@ -58,25 +70,27 @@ def fromSnap_cpu(file, lab):
 			plt.semilogy(z,sfr)		
 			plt.plot(z,sfr)
 			plt.xlabel('z')
-			plt.ylabel(r'$M_{\odot}.yrs^{-1}.(Mpc.h^{-1})^{-3}$')		
+			plt.ylabel(r'$M_{\odot}.yrs^{-1}.Mpc^{-3}$')		
 			plt.legend()
 					
 	plt.show(block=False)
 	
-def fromPop(stars,folder,**kwargs):
-	z,sfr = getFromPop(stars,folder)	
+def fromPop(stars,Param,**kwargs):
+	z,sfr = getFromPop(stars,Param)	
 	if len(stars.mass):
 		plt.semilogy(z,sfr,**kwargs)
 		#plt.plot(z,sfr,**kwargs)
 		plt.xlabel('z')
-		plt.ylabel(r'$M_{\odot}.yrs^{-1}.(Mpc.h^{-1})^{-3}$')
+		plt.ylabel(r'$M_{\odot}.yrs^{-1}.Mpc^{-3}$')
 		
 
-def fromSnap(file, **kwargs):
+def fromSnap(step, **kwargs):
 #	plt.figure()
-	folder,filename = IO.splitPath(file)
-	Ntot,a,stars=part.read(file)
-	fromPop(stars,folder,**kwargs)
+
+	Ntot,a,stars=part.read(step.star_path)
+	P=param.Param(step.step_path,step.number)
+	
+	fromPop(stars,P,**kwargs)
 	plt.legend()
 	plt.show(block=False)
 
@@ -117,7 +131,7 @@ def haloMass(file):
 		Mh[HALO] = np.sum(h.mass)
 		
 	return Mh, starHalo
-#histogtram sur les masses de halo
+#histogtramme sur les masses de halo
 	
 def haloMassPlot(Mh, starHalo,folder,**kwargs):
 

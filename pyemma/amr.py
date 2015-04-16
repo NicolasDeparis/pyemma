@@ -152,11 +152,12 @@ class allOct :
 			y=np.int64(dx*self.y[mask])
 			map_tmp=self.map[mask]
 
+
 			for i in range(mask[0].shape[0]):
 				grid[y[i],x[i]] += map_tmp[i]
 			
 			if (l<lmax):
-				img= scipy.ndimage.zoom(grid,np.power(2,(lmax-l)),order=0)		
+				img= scipy.ndimage.zoom(grid,np.power(2,(lmax-l)),order=0)
 				grid_full+= img
 			else:
 				grid_full+=grid

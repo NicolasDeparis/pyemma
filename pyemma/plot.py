@@ -35,7 +35,7 @@ def hist2d(X_all, Y_all):
 		
 	
 
-def getSlice(filename,level,force=0, nproc=0, field="density", xmin=0, xmax=-1, ymin=0, ymax=-1, zmin=0, zmax=-1, log=False):
+def getSlice(filename,level,force=0, nproc=0, field="density", xmin=0, xmax=-1, ymin=0, ymax=-1, zmin=0, zmax=-1, log=True):
 	N = pow(2,level)
 	if xmax == -1 :
 		xmax = N
@@ -44,10 +44,26 @@ def getSlice(filename,level,force=0, nproc=0, field="density", xmin=0, xmax=-1, 
 	if zmax == -1 :
 		zmax = N
 		
+	if xmin<0:
+		xmin=0	
+	if xmax>1:
+		xmax=1	
+
+	if ymin<0:
+		ymin=0	
+	if ymax>1:
+		ymax=1
+		
+	if zmin<0:
+		zmin=0	
+	if zmax>1:
+		zmax=1		
+	
+		
 	if nproc==0:
 		nproc=IO.getNproc(filename)
 		
-	oct2grid(filename,level, force, nproc, field, xmin, xmax, ymin, ymax, zmin, zmax, proj=3)
+	convert.oct2grid(filename,level, force, nproc, field, xmin, xmax, ymin, ymax, zmin, zmax, proj=3)
 
 	data = cube(filename.replace("grid.","cube"+ str(level)+ ".") + "." + field)
 
@@ -65,6 +81,9 @@ def slice(filename,level,force=0, nproc=0, field="density", xmin=0, xmax=-1, ymi
 	if nproc==0:
 		nproc=IO.getNproc(filename)
 	data = getSlice(filename,level,force, nproc, field, xmin, xmax, ymin, ymax, zmin, zmax, log)
+	
+	print np.mean(data)
+	print np.max(data)
 	
 	N = pow(2,level)
 	if xmax == -1 :
@@ -111,7 +130,7 @@ def readMovie(file):
 
 	return x,y,a,m
 
-def movie(folder ="data/movie/", field=2):
+def movie(folder ="data/movie/", field=1):
 
 	files = np.sort(os.listdir(folder))
 	i,j=0,0
@@ -128,7 +147,12 @@ def movie(folder ="data/movie/", field=2):
 	if field == 3:
 		fieldname = "rfield.temp"
 	
-	for file in files:
+	try:
+		os.mkdir(folder+"../img")
+	except  OSError:
+		print "folder exists"
+	
+	for file in files:		
 		i+=1
 		if  i%nsub == 0 :
 			j+=1		
@@ -146,15 +170,15 @@ def movie(folder ="data/movie/", field=2):
 	
 				
 				plt.axis("off")
-				plt.text( 2, 10, 'size = 4 Mpc.h^-1')
+				plt.text( 2, 10, 'size = 2 Mpc.h^-1')
 				plt.text( 2, 20, 'z = %s '%"{:.2f}".format(1./a-1.))
 				plt.text( 2, 30, 't = %s Myrs'%"{:.2f}".format(t/1e6))
 				
-				fig=plt.imshow(np.log(data1), interpolation='nearest')
+				fig=plt.imshow(np.log(data1[::8,::8]), interpolation='nearest')
 				fig.axes.get_xaxis().set_visible(False)
 				fig.axes.get_yaxis().set_visible(False)
 				
-				plt.savefig(image_file, bbox_inches='tight', pad_inches=0)
+				plt.savefig(folder+"../"+image_file, bbox_inches='tight', pad_inches=0)
 				plt.clf()
 
 

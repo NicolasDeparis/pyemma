@@ -2,72 +2,87 @@ import sys,os
 import numpy as np
 import matplotlib.pylab as plt
 
-"""
-class Params:
-	def __init__(self,folder = "data"):
-		filename = "%sparam.00000.p00000"%folder
-		self.d = {}
-		with open(filename) as f:
-			for line in f:
-				(key, val) = line.split()
-				self.d[key] = val				
-	def get(self):
-		return self.d
-"""
-
 class Param:
-	def __init__(self,folder = "data"):
-		self.info=ParamsInfo(folder)
-		self.run=ParamsRun(folder)
-		self.avg=ParamsAvg(folder)
+	def __init__(self,folder = "data",stepnum=10):
+		self.info=ParamsInfo(stepnum,folder)
+		self.run=ParamsRun(stepnum,folder)
+		self.avg=ParamsAvg(stepnum,folder)
 		
 class ParamsInfo:
-	def __init__(self,folder = "data"):
-		filename = "%sparam.info"%folder
+	def __init__(self, stepnum,folder = "data"):
+		paramfile="param.info"
+		try :
+			filename = "%s%s%s%s"%(folder,"{:05d}/".format(int(stepnum)),"grid/",paramfile)
+			f = open(filename)		
+		except  IOError:
+			filename = "%s%s%s%s"%(folder,"{:05d}/".format(int(stepnum)),"part/",paramfile)
+			f = open(filename)
+
 		self.d = {}
-		with open(filename) as f:
-			for line in f:				
-				if line[0]!="#":		
-					(key, val) = line.split()				
-					self.d[key] = float(val)
+		for line in f:				
+			if line[0]!="#":		
+				(key, val) = line.split()				
+				self.d[key] = float(val)
 	def get(self):
 		return self.d
 		
 class ParamsRun:
-	def __init__(self,folder = "data"):
-		filename = "%sparam.run"%folder
+	def __init__(self, stepnum,folder = "data"):
+		paramfile="param.run"
+		try :
+			filename = "%s%s%s%s"%(folder,"{:05d}/".format(int(stepnum)),"grid/",paramfile)
+			f = open(filename)		
+		except  IOError:
+			filename = "%s%s%s%s"%(folder,"{:05d}/".format(int(stepnum)),"part/",paramfile)
+			f = open(filename)
+
 		self.d = {}
-		with open(filename) as f:
-			for line in f:				
-				if line[0]!="#":
-					(key, val) = line.split()					
-					self.d[key] = val
+		for line in f:				
+			if line[0]!="#":
+				(key, val) = line.split()					
+				self.d[key] = val
 	def get(self):
 		return self.d
 		
 class ParamsAvg:
 	"""
-	step, aexp, z, max_level,max_rho,mean_xion,mean_T,max_T,stars,sfr
+	step, aexp, z, dt, max_level,max_rho,mean_xion,mean_T,max_T,stars,sn
 	"""
-	def __init__(self,folder = "data"):
+	def __init__(self, stepnum=0,folder = "data"):
 		self.folder=folder
-		filename = "%sparam.avg"%folder
-		data= np.loadtxt(filename,skiprows=1,unpack=True)
 		
+		paramfile="param.avg"
+		try :
+			filename = "%s%s%s%s"%(folder,"{:05d}/".format(int(stepnum)),"grid/",paramfile)
+			f = open(filename)		
+		except  IOError:
+			filename = "%s%s%s%s"%(folder,"{:05d}/".format(int(stepnum)),"part/",paramfile)
+			f = open(filename)
+
+		data= np.loadtxt(filename,skiprows=1,unpack=True)
+	
 		self.data = {}
 		self.data["step"] = data[0]
 		self.data["aexp"] = data[1]
 		self.data["z"] = data[2]
-		self.data["max_level"] = data[3]
-		self.data["max_rho"] = data[4]
-		self.data["mean_xion"] = data[5]
+		self.data["dt"] = data[3]
+		self.data["max_level"] = data[4]
+		self.data["max_rho"] = data[5]
+		self.data["mean_xion"] = data[6]
 		self.data["mean_T"] = data[6]
-		self.data["max_T"] = data[7]
-		self.data["stars"] = data[8]
-
+		self.data["max_T"] = data[8]
+		self.data["stars"] = data[9]
+		self.data["SN"] = data[10]
+	#	self.data["src"] = data[11]
 		
 	def get(self):
 		return self.data
+		
+	def getxy(self,x_field,y_field,**kwargs):
+		x=self.data[x_field]
+		y=self.data[y_field]
+		return x,y
+		
 	def evol(self,x_field,y_field, log=0,**kwargs):
 		x=self.data[x_field]
 		y=self.data[y_field]
@@ -75,8 +90,10 @@ class ParamsAvg:
 			plt.loglog(x,y,**kwargs)
 		else:
 			plt.plot(x,y, **kwargs)	
+			
+		plt.xlabel(x_field)
+		plt.ylabel(y_field)
 		plt.legend()
-		plt.show()
 		
 """		
 def printparam(folder):

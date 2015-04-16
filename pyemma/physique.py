@@ -9,8 +9,8 @@ from scipy import stats
 class Constantes : 
 	def __init__(self):
 
-		self.Parsec = 3.08567758e16
-		self.G      = 6.67384e-11            	# newton constant
+		self.Parsec = 3.08567758e16				# parsec in m
+		self.G      = 6.67384e-11            	# newton constant 
 		self.M0     = 1.9891e30              	# Solar masse
 		self.c      = 299792458              	# velocity of light in m/s
 		self.proton_mass =1.67262158e-27		#kg
@@ -20,14 +20,27 @@ class Constantes :
 		
 		self.Tyr = 977.8 
 
-		self.H0 = 67.0			     	# Hubble constant 
+		self.H0 = 67.0			     			# Hubble constant 
+		self.H0_SI = self.H0*1e3/1e6/self.Parsec # Hubble constant in SI unit
 		self.h  = self.H0/100.
 	
 		self.WB = 0.049
-		self.WM = 0.3175                 	# Omega(matter)
-		self.WV = 0.6825               		# Omega(vacuum) or lambda
+		self.WM = 0.3175                 		# Omega(matter)
+		self.WV = 0.6825               			# Omega(vacuum) or lambda
 		self.WR = 4.165E-5/(self.h*self.h)    	# Omega(radiation)
-		self.WK = 1-self.WM-self.WR-self.WV	# Omega curvaturve = 1-Omega(total)
+		self.WK = 1-self.WM-self.WR-self.WV		# Omega curvaturve = 1-Omega(total)
+
+		self.yr = 31556926						# secondes in 1 year
+
+
+def rho_c():
+	""" critical density """
+	c = Constantes()
+	return 3.*c.H0_SI**2/(8.*np.pi*c.G)
+
+########################################################################
+# time
+########################################################################
 
 def a2z(a) :
 	return 1.0/a -1.0
@@ -62,33 +75,77 @@ def t2a(t):
 	T = a2t(A)
 	return np.interp(t,T,A)
 
-def m2mo(m,folder) :
+########################################################################
+# mass
+########################################################################
+
+def m2mo(m,P) :
 	"""
-		convert code mass in kg
+		convert code mass in solar mass
 	"""
-	c = Constantes()
-	p = param.ParamsInfo(folder = folder).get()
+	c = Constantes()	
+	p = P.info.get()
 	unit_m = float(p["unit_mass"])
 	return m/c.M0*unit_m 
 
-def mo2m(mo,folder) :
+def mo2m(mo,P) :
 	"""
 		convert solar mass in code unit
 	"""
 	c = Constantes()
-	p = param.ParamsInfo(folder = folder).get()
+	p = P.info.get()
 	unit_m = float(p["unit_mass"])
 	return mo*c.M0/unit_m 
 
-def Cell2Meter(args):
+########################################################################
+# length
+########################################################################
+
+def Cell2Meter(x,P,level):
 	"""
 		return the size of a cell in parsec
 	"""
-	p = param.ParamsInfo(folder = args.folder).get()
+	p = P.info.get()
 	L = float(p["unit_l"])/3.085677e16
-	dx = pow(2,- args.level)*L
-	return dx
+	dx = pow(2,- level)*L
+	return x*dx
 	
+
+########################################################################
+# energy
+########################################################################
+
+def E2lambda(E):
+	cst=Constantes() 
+	c=cst.c
+	h=cst.planck
+	return h*c/E
+
+def lambda2E(l):
+	cst=Constantes() 
+	c=cst.c
+	h=cst.planck
+	return h*c/l
+	
+def eV2lambda(eV):
+	cst=Constantes()
+	h = cst.planck
+	c = cst.c	  
+	Ej = eV*cst.eV
+	return h*c/Ej
+	
+def lambda2nu(l):
+	cst=Constantes() 
+	return cst.c/l
+	
+def nu2E(nu):
+	cst=Constantes()
+	return cst.planck*nu
+	
+
+########################################################################
+# photon
+########################################################################
 	
 def Nphotons_1():
 	#iliev 2006 http://adsabs.harvard.edu/abs/2006MNRAS.369.1625I
@@ -109,6 +166,7 @@ def Nphotons_1():
 	N_dot = f_gamma*M*o_b/(dti*o_0*mp)
 	
 	print N_dot
+
 
 def Nphotons_2():
 	#E_rayonne = 100 * E_SN
@@ -148,10 +206,10 @@ def Nphotons_4():
 	M0 =c .M0
 	print E0 /(1e6*M0)
 	
+########################################################################
+		
 def test():
 	M=np.linspace(1,120,1e2)
-	
-	
 	plt.loglog(M,BB_int(M))
 	
 
@@ -191,13 +249,7 @@ def percent_mass_imf():
 	
 	print integ(n,m)/integ(ntot,mtot)
 	
-def eV2lambda(eV):
-	cst=Constantes()
-	h = cst.planck
-	c = cst.c	  
-	Ej = eV*cst.eV
-	return h*c/Ej
-	
+
 def black_body(l,T):
 	"""Planck law"""
 	cst=Constantes()
@@ -233,23 +285,26 @@ def farUVbelow912():
 	x_in=np.linspace(3,9,100)
 	y_in=A[0]*x_in+A[1]
 	print A
-	#plt.plot(x_in,y_in)
+	plt.plot(x_in,y_in)
 		
 	mask = np.where(x>7)
 	B= stats.linregress(x[mask],y[mask])
 	x_in=np.linspace(5,9,100)				
 	y_in=B[0]*x_in+B[1]
 	print B
-	#plt.plot(x_in,y_in)
+	plt.plot(x_in,y_in)
 	plt.show()
-	
+
+########################################################################
+# verification of the DECRAESE_EMMISIVITY_AFTER_TLIFE flag
+########################################################################
 def lower(t,E0):
 	return E0
 def upper(t,tlife,E0):
 	return E0*np.power(t/tlife ,-4.)
 
 def verif():
-	tlife = 10**(6.55)
+	tlife = 10**(6.565)
 	E0 = 10**(52.71)
 	
 	n = 10000
@@ -268,7 +323,7 @@ def verif():
 
 	plt.plot(np.log10(t),np.log10(y))
 
-	
+	"""
 	mask = np.where(t<tlife)
 	y[mask] = E0 * np.ones(len(mask))
 	
@@ -276,15 +331,10 @@ def verif():
 	y[mask] = E0*np.power(t/tlife,-4)* np.ones(len(mask))
 	
 	plt.plot(np.log10(t),np.log10(y))
+	"""
+	
 	plt.show()
 
-def lambda2nu(l):
-	cst=Constantes() 
-	return cst.c/l
-	
-def nu2E(nu):
-	cst=Constantes()
-	return cst.planck*nu
 
 def verif100000K():
 	x=np.linspace(1e2,1e4,1e4)*1e-10
@@ -293,26 +343,18 @@ def verif100000K():
 	plt.loglog(x*1e10,y,'r')
 	plt.show()
 	
-def E2lambda(E):
-	cst=Constantes() 
-	c=cst.c
-	h=cst.planck
-	return h*c/E	
+	
 	
 def getNphot(t):
 	data = np.loadtxt('python/Starburst99/912_inst_e.dat.txt',unpack=True)
 	x=data[0]
 	y=np.power(10,data[1])
 	return np.interp(t,x,y)	
+	
 ########################################################################
 ## Atomic.h with starburst99 file
 ########################################################################
 
-def lambda2E(l):
-	cst=Constantes() 
-	c=cst.c
-	h=cst.planck
-	return h*c/l
 
 def cross_section(egy):
   P=2.963

@@ -2,31 +2,29 @@ import numpy as np
 import matplotlib.pylab as plt
 import mpl_toolkits.mplot3d.axes3d as p3
 
+import sfr
 import convert
 import amr
 import IO
 import param
 import plot
 import part
+import physique
+
 
 class step:
 	def __init__(self,number,folder="data"):
+		self.number=number
+		
+		self.step_path=	folder
 		self.grid_path=	("%s%s/grid/grid.%s"%(folder,"{:05d}".format(number),"{:05d}".format(number) )) 
 		self.part_path=	("%s%s/part/part.%s"%(folder,"{:05d}".format(number),"{:05d}".format(number) )) 
 		self.star_path=	("%s%s/star/star.%s"%(folder,"{:05d}".format(number),"{:05d}".format(number) )) 
 		
-		self.param=param.Param(folder)
-		
-	def grid(self):
-		return self.grid_path
-	def part(self):
-		return self.part_path
-	def star(self):
-		return self.star_path
-					
-	def t(self):
-		return part.geta(self.part()+".p00000")
-		
+		self.param=param.Param(folder,number)
+		self.a = part.geta(self.part_path+".p00000")
+		self.t = physique.a2t(self.a)
+
 	def Diag(self,fieldX="field.d",fieldY="rfield.temp",type="hist"):
 		
 		X_all=amr.allOct(self.grid_path, fieldX)
@@ -48,7 +46,6 @@ class step:
 			plt.legend()
 			plt.xlabel('%s'%fieldX)
 			plt.ylabel('%s'%fieldY)
-		plt.show()
 
 
 	def diagXm_Xv(self):
@@ -81,35 +78,36 @@ class step:
 		X_all+=1.
 		Y_all = X_all * np.power(Y_all,2)/(1.-Y_all)
 		
-	
 		plot.hist2d(X_all, Y_all)
 		
 		#plt.xlim(0,4.5)
 		#plt.ylim(-10,10)
 		
-	def phaseMass(self):
-		AMR=amr.allOct(self.grid_path, "field.d")
+	def pdf(self,field, **kwargs):
+		AMR=amr.allOct(self.grid_path,field)
 		rho=AMR.getMap()
 		l=AMR.getLevel()
 		
-		dx = np.power(2.,-l)
+		dx = np.power(0.5,l)
 		dv = np.power(dx,3.)
 		
-		nstar,a,star = part.read(self.star_path)
+		Nbins= 50
+	
+		rho_min = np.min(rho)
+		rho_max = np.max(rho)
+		bin_edges = np.logspace(np.log10(rho_min),np.log10(rho_max),Nbins+1)
+		y,bin_edges=np.histogram(rho, bins=bins_edges, weights=dv)
+		x=(bin_edges[1:]+bin_edges[:-1])/2
+		
+		plt.loglog(x,y,'.', **kwargs)
+	
+		plt.axvline(x=100, ymin=np.min(y), ymax = np.max(y), color='k')
 
-		m=rho*dv
-		
-		"""
-		for i in range(AMR.lmin(),int(AMR.lmax()+1)):
-			mask=np.where(l==i)
-			plt.loglog(rho[mask],m[mask],'.',label='level%d'%i)
-		plt.legend()
-		"""
-		
-		plot.hist2d(rho,m)
-		
-		m1 = np.log10(np.unique(star.mass)[0])
-		plt.axhline(y=m1)
+	def sfr(self):
+		sfr.fromSnap(self)
+		sfr.observation()
 
-		rho1 = 86
-		plt.axvline(x=np.log10(rho1))
+	def xion(self):
+		self.param.avg.evol("z","mean_xion")
+
+
