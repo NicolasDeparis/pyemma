@@ -65,7 +65,7 @@ class Field:
 
 class Param:
 	def __init__(self,folder):
-		print("Reading param")
+		#print("Reading param")
 		self.run=Run(folder)
 		self.avg=Avg(folder)
 		self.info=Info(folder)
