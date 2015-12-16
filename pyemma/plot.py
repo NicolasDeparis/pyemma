@@ -1,3 +1,5 @@
+import os, sys
+
 import matplotlib.pylab as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
@@ -7,24 +9,51 @@ from scipy.ndimage.interpolation import map_coordinates
 
 
 
-from convert import *
-from amr import *
+import convert  
+import amr
 import physique
+import IO
 
 
-def hist2d(X_all, Y_all):
-	n=1024	
+def hist1d(X_all, Y_all):
+	
+	Nbins = 100
+	log=1
+	
+	x_min = np.min(X_all)
+	x_max = np.max(X_all)
+	
+	if log:
+		bins_edges = np.logspace(np.log10(x_min),np.log10(x_max),Nbins+1)
+	else:
+		bins_edges = np.linspace(x_min,x_max,Nbins+1)
+
+	
+	y,bins_edges=np.histogram(X_all, bins=bins_edges, weights=Y_all)
+	x=(bins_edges[1:]+bins_edges[:-1])/2	
+	
+	#dx,bins_edges=np.histogram(X_all, bins=bins_edges)
+	dx = np.diff(bins_edges)
+
+
+	return x,y/dx
+
+		
+
+def hist2d(X_all, Y_all, **kwargs):
+	n=256
 	xedges=np.logspace(np.min(X_all),np.max(X_all),n)
 	yedges=np.logspace(np.min(Y_all),np.max(Y_all),n)
 	
 	x=np.log10(X_all)
 	y=np.log10(Y_all)
 	
-	H,yedges,xedges=np.histogram2d(y,x,bins=n)
+	H,yedges,xedges=np.histogram2d(y,x,bins=n, **kwargs)
 	X, Y = np.meshgrid(xedges, yedges)
 	H = np.ma.masked_where(H==0,H) 
 
 	plt.pcolormesh(X, Y, np.log(H))
+	#plt.pcolormesh(X, Y, H)
 	
 	cb=plt.colorbar()
 	cb.set_label('log10 of number of occurence')
@@ -33,57 +62,15 @@ def hist2d(X_all, Y_all):
 	plt.ylim(yedges[0], yedges[-1])
 
 		
-	
-
-def getSlice(filename,level,force=0, nproc=0, field="density", xmin=0, xmax=-1, ymin=0, ymax=-1, zmin=0, zmax=-1, log=True):
-	N = pow(2,level)
-	if xmax == -1 :
-		xmax = N
-	if ymax == -1 :
-		ymax = N
-	if zmax == -1 :
-		zmax = N
-		
-	if xmin<0:
-		xmin=0	
-	if xmax>1:
-		xmax=1	
-
-	if ymin<0:
-		ymin=0	
-	if ymax>1:
-		ymax=1
-		
-	if zmin<0:
-		zmin=0	
-	if zmax>1:
-		zmax=1		
-	
-		
-	if nproc==0:
-		nproc=IO.getNproc(filename)
-		
-	convert.oct2grid(filename,level, force, nproc, field, xmin, xmax, ymin, ymax, zmin, zmax, proj=3)
-
-	data = cube(filename.replace("grid.","cube"+ str(level)+ ".") + "." + field)
-
-	print "Z=%.4f"%data.getZ()
-	data = data.getData()
-
-	if log:
-		data = np.log10(data)
-	
-	data = np.max(data,axis=0)
-	#data = np.mean(data,axis=0)
-	return data
 
 def slice(filename,level,force=0, nproc=0, field="density", xmin=0, xmax=-1, ymin=0, ymax=-1, zmin=0, zmax=-1, log=False):
 	if nproc==0:
 		nproc=IO.getNproc(filename)
-	data = getSlice(filename,level,force, nproc, field, xmin, xmax, ymin, ymax, zmin, zmax, log)
+	data = amr.getSlice(filename,level,force, nproc, field, xmin, xmax, ymin, ymax, zmin, zmax, log)
 	
-	print np.mean(data)
-	print np.max(data)
+	print "mean = %e"%np.mean(data)
+	print "max = %e"%np.max(data)
+	
 	
 	N = pow(2,level)
 	if xmax == -1 :
@@ -92,23 +79,24 @@ def slice(filename,level,force=0, nproc=0, field="density", xmin=0, xmax=-1, ymi
 		ymax = N
 	if zmax == -1 :
 		zmax = N
-	plt.clf()
+	#plt.clf()
 	plt.imshow(data, interpolation='nearest',extent=(xmin,xmax,ymin,ymax),origin='lower' )
 	plt.colorbar()
-	plt.show(block=False)
+	#plt.clim(-0.075,0.03)
+	plt.show()
 
-def diffslice(filename1,filename2,level,force=0, nproc=0, field="density", xmin=0, xmax=-1, ymin=0, ymax=-1, zmin=0, zmax=-1, log=False):
+def diffslice(filename1,filename2,level,force=0, nproc=0, field="field.d", xmin=0, xmax=-1, ymin=0, ymax=-1, zmin=0, zmax=-1, log=False):
+	
 	if nproc==0:
 		nproc=IO.getNproc(filename1)
-	data1 = getSlice(filename1,level,force, nproc, field, xmin, xmax, ymin, ymax, zmin, zmax, log)
-	data2 = getSlice(filename2,level,force, nproc, field, xmin, xmax, ymin, ymax, zmin, zmax, log)
+	data1 = getSlice(filename1,level,force, nproc, field, xmin, xmax, ymin, ymax, zmin, zmax, log=0)
+	data2 = getSlice(filename2,level,force, nproc, field, xmin, xmax, ymin, ymax, zmin, zmax, log=0)
 
 	data=np.subtract(data1,data2)
-
-	"""	
+	
 	if log:
 		data = np.log10(np.abs(data))
-	"""
+	
 	plt.clf()
 	plt.imshow(data, interpolation='nearest',extent=(xmin,-xmax,ymin,-ymax),origin='lower' )
 	plt.colorbar()
@@ -118,10 +106,11 @@ def diffslice(filename1,filename2,level,force=0, nproc=0, field="density", xmin=
 def readMovie(file):
 	m=[]
 	
+	
 	f = open(file, "rb")
 	x 	= np.fromfile(f, dtype=np.int32  ,count=1)[0]
 	y 	= np.fromfile(f, dtype=np.int32  ,count=1)[0]
-	a 	= np.fromfile(f, dtype=np.float32  ,count=1)[0]			
+	a 	= np.fromfile(f, dtype=np.float32  ,count=1)[0]		
 	m.append(np.fromfile(f, dtype=np.float32  ,count=x*y))		#pot
 	m.append(np.fromfile(f, dtype=np.float32  ,count=x*y))		#den
 	m.append(np.fromfile(f, dtype=np.float32  ,count=x*y))		#X
@@ -133,10 +122,12 @@ def readMovie(file):
 def movie(folder ="data/movie/", field=1):
 
 	files = np.sort(os.listdir(folder))
+	#files = files["movie" in files]
+	print files 
 	i,j=0,0
 	
 	nsub = 1
-	fig = plt.figure(figsize=(10,10))
+	fig = plt.figure(0,figsize=(10,10))
 	
 	if field == 0:
 		fieldname = "gdata.p"
@@ -152,34 +143,41 @@ def movie(folder ="data/movie/", field=1):
 	except  OSError:
 		print "folder exists"
 	
-	for file in files:		
+	for file in files:
 		i+=1
 		if  i%nsub == 0 :
-			j+=1		
+			j+=1
 			image_file = "img/"+file.replace("movie",fieldname)+".png"
-			
-			if not os.path.isfile(image_file):
+			print image_file
+
+			if not os.path.isfile(folder+"../" + image_file):
 
 				print "%d / %d"%(j,len(files)/nsub)
 
 				x,y,a,m = readMovie(folder+file)
-
-				t = physique.a2t(a)
+				data = m[field].reshape(x,y)			
+				#data = np.log10(data)
+				fig=plt.imshow(	data, interpolation='nearest')
 				
-				data1 = m[field].reshape(x,y)
-	
+				#shift= 2**0
+				#fig=plt.imshow(np.log(data[::shift,::shift]), interpolation='nearest')				
 				
-				plt.axis("off")
+				"""
+				t = physique.a2t(a)				
+				t=a
 				plt.text( 2, 10, 'size = 2 Mpc.h^-1')
 				plt.text( 2, 20, 'z = %s '%"{:.2f}".format(1./a-1.))
 				plt.text( 2, 30, 't = %s Myrs'%"{:.2f}".format(t/1e6))
-				
-				fig=plt.imshow(np.log(data1[::8,::8]), interpolation='nearest')
+				"""
+							
+				plt.axis("off")
 				fig.axes.get_xaxis().set_visible(False)
 				fig.axes.get_yaxis().set_visible(False)
 				
 				plt.savefig(folder+"../"+image_file, bbox_inches='tight', pad_inches=0)
 				plt.clf()
+
+
 
 
 def part(parts, level=1):
@@ -217,11 +215,11 @@ def p3D(file,level,field,nproc=0,force=0,xmin=0, xmax=-1, ymin=0, ymax=-1, zmin=
 	if nproc==0:
 		nproc=IO.getNproc(file)
 		
-	oct2grid(file,level, force, nproc, field, xmin, xmax, ymin, ymax, zmin, zmax, proj=0)
-	data = cube(file.replace("grid.","cube"+ str(level)+ ".") + "." + field)
+	convert.oct2grid(file,level, force, nproc, field, xmin, xmax, ymin, ymax, zmin, zmax, proj=0)
+	data = amr.cube(file.replace("grid.","cube"+ str(level)+ ".") + "." + field)
 	data = data.getData()
 	
-	
+	"""
 	n=128
 	x1 = np.linspace(0,1,n)
 	y1 = np.linspace(0,1,n)
@@ -234,10 +232,14 @@ def p3D(file,level,field,nproc=0,force=0,xmin=0, xmax=-1, ymin=0, ymax=-1, zmin=
 	x2,y2,z2=np.meshgrid(x2,y2,z2)
 	
 	data = interp3D(x1,y1,z1, data, x2,y2,z2)
+	"""
 	
-	contours=[1e4]
+	contours=[2e-2]
 	mlab.contour3d(data,opacity=0.1, contours=contours)
-	mlab.savefig('test_256.obj')
+	
+	#contours=[1e6]
+	#mlab.contour3d(data,opacity=0.1, contours=contours)
+	#mlab.savefig('test_256.obj')
 
 	mlab.show()
 	

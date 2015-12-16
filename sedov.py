@@ -1,37 +1,38 @@
-#!/usr/bin/env python
+ #!/usr/bin/env python
 import os, sys
 import numpy as np
-from pyemma  import *
+
 
 import matplotlib.pylab as plt
-from math import sqrt
-import threading
+#from math import sqrt
+#import threading
 
+from pyemma  import *
 
-
-def solution(level):
+def solution(t, eblast):
 	"""
 	eblast need to be set manually in sedov3.f 
 	"""
-	
-	param = IO.Params().get()
-	inyrs = float(param["unit_t"])/3.1536e13;
+	"""
+	inyrs = float(param.info.get()["unit_t"])/3.1536e13;
 	
 	a = amr.geta(amr.cubename(fileName,level,field))
 	a -= 2e1
 	a /= inyrs
-	
+	"""
 	commande = "gfortran utils/sedov/sedov3.f -o utils/sedov/BW" 
-	#os.system(commande)
+	os.system(commande)
+	
+	eblast= 2.598159e-10
 
-	commande = "./utils/sedov/BW %s"%a
+	commande = "./utils/sedov/BW %s %s"%(t,eblast)
 	os.system(commande)
 
 	x,y = np.loadtxt('utils/sedov/sedov.dat', usecols=(1,2), unpack=True)
 	x /= np.max(x)
-	x *= pow(2,level)
+#	x *= pow(2,level)
 	y /= y[len(y)-1]	
-	plt.plot(x,y,label='analytical')
+	plt.semilogy(x,y,label='analytical')
 	
 def plot_xft(args):
 	data = profile.readAllProfil(folder = args.folder)	
@@ -60,7 +61,6 @@ def plot_vft(args):
 
 	y2 = frontSpeed(y,t)
 	
-	
 	plt.figure()
 	plt.ylabel(r'speed (pc.Myr$^{-1})$')
 	plt.xlabel(r'time (Myr)')
@@ -81,22 +81,23 @@ def plot_ampft(args):
 	
 if __name__ == "__main__":	
 
-	args = IO.getargs()
+# 	args = IO.getargs()
 
 #	Nx,Ny,Nz,x,y = getProfileProper(amr.cubename(args.files[0],args.level,args.field))
 #	Nx,Ny,Nz,x,y = getProfile(fileName,args.level,args.field[0])
 #	plt.plot(x,y,'.', label="numerical")
-#	solution(args.level)
+	
+	solution(6,10000)
 
 #	folders = ["data/", "src_sn/", "src/"]
 	
 #	for folder in folders:
 #		args.folder=folder
 
-	profile.getAllProfil(args, folder = args.folder)
+	#profile.getAllProfil(args, folder = args.folder)
 
-	plot_xft(args)
+	#plot_xft(args)
 	#plot_vft(args)
 	#plot_ampft(args)
 
-	plt.show()
+	#plt.show()

@@ -227,7 +227,7 @@ class Tree:
         return ind, dist
 
 
-    def locatenear( self, point, r, nmax=100000):
+    def locatenear( self, point, r, nmax=5000000):
         """
         Find all points within r of an arbitrary point x:
              nblist, dist = tree.locatenear(x,r)

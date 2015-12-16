@@ -143,6 +143,8 @@ def field2ID(field="field.d"):
 	"""
 	Convert field from emma description to oct2grid description
 	"""
+	
+	print field
 
 	if field=="density" : 
 		f=" -1 "
@@ -169,9 +171,11 @@ def field2ID(field="field.d"):
 		f=" 104 "
 	if field=="field.p" : 
 		f=" 105 "
-	if field=="field.E" : 
+	if field=="field.vel" : 
 		f=" 106 "
-		
+	if field=="field.velrad" : 
+		f=" 107 "
+			
 	if field=="f0" : 
 		f=" 201 "
 	if field=="f1" : 
@@ -255,10 +259,20 @@ def oct2grid(data,level, force=0, nproc=0, field="field.d", xmin=0, xmax=-1, ymi
 
 	zmin *= (zmin>1)*dx + (zmin<=1)
 	zmax *= (zmax>1)*dx + (zmax<=1)
-	
-	o2g  = "utils/oct2grid "
-	
-	out  = data.replace("grid.","cube"+ str(level) +".") + "." + field
+			
+	o2g=""
+	for i in data.split('/')[:-4]:
+		o2g += "%s/"%(i)	
+	o2g += "utils/oct2grid "
+	#print o2g	
+		
+	if proj == 0:
+		type ="cube"
+	if proj == 3:
+		type ="slice"
+				
+	out  = data.replace("grid.",type + str(level) +".") + "." + field
+	#print out
 	commande = (o2g + " " + 
 							data + " " +  
 							str(level) + " "  + 
@@ -279,14 +293,18 @@ def oct2grid(data,level, force=0, nproc=0, field="field.d", xmin=0, xmax=-1, ymi
 		print "oct2grid : file %s allready exist"%out
 		if force:
 			print "but do it anyway!"
+			print commande 
 			os.system(commande)
-	else :
+	else :		
+		print commande 
 		os.system(commande)
+		
 
 def oct2cell(data, force=0, nproc=0, field="field.d", xmin=0, xmax=-1, ymin=0, ymax=-1, zmin=0, zmax=-1, silo=0):
 	"""
 		Parser for oct2cell
 	"""
+
 	if nproc==0:
 		nproc=IO.getNproc(data)
 
@@ -297,18 +315,24 @@ def oct2cell(data, force=0, nproc=0, field="field.d", xmin=0, xmax=-1, ymin=0, y
 	print "Field = ", field
 	print "******************************"
 
-	o2g  = "utils/alloct "
+
+	o2g=""
+	for i in data.split('/')[:-4]:
+		o2g += "%s/"%(i)	
+	
+	o2g += "utils/alloct "
 	
 	out  = data.replace("grid.","alloct.") + "." + field
 	commande = (o2g + " " + 
-							data + " " +  
-							str(100) + " "  + 
-							str(f) + " " + 
-							out + " " + 
-							str(nproc) + " " + 
-							str(silo) + 
-							" -1 " )
-
+				data + " " +  
+				str(100) + " "  + 
+				str(f) + " " + 
+				out + " " + 
+				str(nproc) + " " + 
+				str(silo) + 
+				" -1 " )
+	print commande
+	
 	if os.path.isfile(out):
 		print "oct2cell : file %s allready exist"%out
 		if force:

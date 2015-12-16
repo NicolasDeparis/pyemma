@@ -1,4 +1,6 @@
 #define FLOAT double
+#define BIG 1e38
+
 
 //--------------------------------------------------------------------
 //------------------        STRUCTURES             -------------------
@@ -7,7 +9,7 @@
 typedef struct Point 
 {
     int DIM;
-    FLOAT *x;
+    FLOAT *x;       
 }Point;
 
 typedef struct Box
@@ -26,6 +28,7 @@ typedef struct Tree
     int *rptindx;  // reverse index: rptindx[ptindx[i]]=i
     int nboxes;    // Total number of boxes in the tree
     Box *boxes;    // Array of boxes
+    FLOAT *global_coords; // Array containing all coordinates for all points
 }Tree;
 
 
@@ -81,4 +84,5 @@ int locatenear(Tree tree, Point pt, FLOAT r,
 //------------------        Memory cleaning         ------------------
 //--------------------------------------------------------------------
 void free_tree(Tree *tree);
+
 

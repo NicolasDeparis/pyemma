@@ -6,9 +6,10 @@ Numerical Recipees, third edition
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>  
-#include "argsort.h" 
-#define BIG 1e38
-#define FLOAT double
+#include <time.h>  
+#include "argsort.h"
+#include "kdtree.h"
+
 
 
 // Defining clean memory allocation.
@@ -23,34 +24,8 @@ Numerical Recipees, third edition
 
 
 
+FLOAT square(FLOAT a) {return a*a;}
 
-
-FLOAT inline square(FLOAT a) {return a*a;}
-
-typedef struct Point 
-{
-    int DIM;
-    FLOAT *x;
-}Point;
-
-typedef struct Box
-// Base element of the tree
-{
-    Point hi,lo;
-    int mom, dau1, dau2, ptlo, pthi;
-}Box;
-
-typedef struct Tree
-{
-    int N;               // Number of points in the tree
-    int DIM;             // Dimension of the system
-    Point *pts;          // Array of Points with coordinates
-    int *ptindx;         // Keep track of the position of each point
-    int *rptindx;        // reverse index: rptindx[ptindx[i]]=i
-    int nboxes;          // Total number of boxes in the tree
-    Box *boxes;          // Array of boxes
-    FLOAT *global_coords; // Array containing all coordinates for all points
-}Tree;
 
 
 

@@ -17,9 +17,13 @@ class Constantes :
 		self.planck =  6.62617e-34				#J/s Planck constant
 		self.boltzmann = 1.38066e-23 			#J/K Boltzmann constant
 		self.eV = 1.602176565e-19 				#electron Volt in Joules
+		self.yr = 31556926						# secondes in 1 year
 		
-		self.Tyr = 977.8 
-
+		
+		
+		
+		#cosmo
+		
 		self.H0 = 67.0			     			# Hubble constant 
 		self.H0_SI = self.H0*1e3/1e6/self.Parsec # Hubble constant in SI unit
 		self.h  = self.H0/100.
@@ -27,10 +31,10 @@ class Constantes :
 		self.WB = 0.049
 		self.WM = 0.3175                 		# Omega(matter)
 		self.WV = 0.6825               			# Omega(vacuum) or lambda
-		self.WR = 4.165E-5/(self.h*self.h)    	# Omega(radiation)
-		self.WK = 1-self.WM-self.WR-self.WV		# Omega curvaturve = 1-Omega(total)
+		self.WR = 0#1*4.165E-5/(self.h*self.h)    	# Omega(radiation)
+		self.WK = 0#1-self.WM-self.WR-self.WV		# Omega curvaturve = 1-Omega(total)
 
-		self.yr = 31556926						# secondes in 1 year
+		
 
 
 def rho_c():
@@ -48,13 +52,13 @@ def a2z(a) :
 def z2a(z):
 	return 1.0/(1.0+z)
 
-def a2t(a) :
-	"""
-		convert expansion factor to time
+
+def a2t(az):
+	""" 
+#		convert expansion factor to time
 	"""
 	c = Constantes()
-
-	az = 1.0/(1.0+1.0*a2z(a))
+	
 	age = 0.
 	n=1000         # number of points in integrals
 	for i in range(n):
@@ -62,9 +66,94 @@ def a2t(a) :
 		adot = np.sqrt(c.WK+(c.WM / a)+(c.WR/ (a*a) )+ (c.WV*a*a) )
 		age = age + 1./adot
 	zage = az*age/n
-	zage_Gyr = (c.Tyr/c.H0)*zage
+	zage = (977.8 /c.H0)*zage * 1e9 
 
-	return zage_Gyr*1e9
+	return zage
+
+
+def a2t_romberg(b):
+	
+	c = Constantes()
+	
+	MAXJ=5
+	MAXITER=16
+	
+	H0=c.H0_SI *(365*24*3600)
+	om=c.WM	
+	ov=1.-om	
+	a=1e-8
+	tol=1e-8
+  	
+	def faexp(a, om, ov):
+		return a*a/np.sqrt((1.0-om-ov)*a*a*a*a+om*a*a*a+ov*a*a*a*a*a*a)	
+	
+	def JMAX(i,MAXJ):		
+		if i<MAXJ:
+			return i
+		else:
+			return MAXJ		
+
+	g=np.zeros(MAXJ+2)
+	h=0.5*(b-a)	
+	gmax=h*(faexp(a,om,ov)+faexp(b,om,ov))
+	g[1]=gmax;
+	nint=1;
+	error=np.inf;
+	
+
+	i=0;
+	while True:
+		i+=1
+		if( (i>MAXITER) or ((i>5) and (np.abs(error)<tol))): 
+			break
+		
+		g0=0.
+		for k in range(1,nint+1):		
+			g0+=faexp(a+(k+k-1)*h,om,ov)
+
+		g0=0.5*g[1]+h*g0
+		h*=0.5
+		nint=nint+nint
+		
+		jmax=JMAX(i,MAXJ)
+				
+		fourj=1.0
+		for j in range(1,jmax+1):		
+			fourj*=4.0
+			g1=g0+(g0-g[j])/(fourj-1.0)
+			g[j]=g0
+			g0=g1
+		
+		if(np.abs(g0)>tol):
+			error=1.0-gmax/g0
+		else:
+			error=gmax
+		
+		gmax=g0
+		g[jmax+1]=g0
+
+	res=g0
+
+	if((i>MAXITER) and (np.abs(error)>tol)):
+		print("ROMBINT FAILED TO CONVERGE integ=%e error=%e\n"%(res,error) )
+  
+	return res/H0
+
+
+
+
+def a2t_quad(az):
+	c = Constantes()
+	
+	o_m=c.WM	
+	o_v=1.-o_m
+	H0=c.H0_SI *(365*24*3600)
+	
+	def f(a):
+		return a/ np.sqrt(o_m*a + o_v*a**4 )
+		
+	return 1./H0 * integrate.quad(f,0,az)[0]
+
 
 def t2a(t):
 	"""
@@ -74,7 +163,34 @@ def t2a(t):
 	A = np.arange(n+1) / float(n)
 	T = a2t(A)
 	return np.interp(t,T,A)
+	
+def code2t(step,t):
+	"""
+		convert code time into physical time
+	"""
+	p =step.param.info.get()
+	a= step.a
+	scale = 1./(a**2 *p["unit_t"])
+	
+	return t/scale
+		
 
+########################################################################
+# density
+########################################################################
+
+def code2d(step,rho):
+	"""
+		convert code density to physical density
+	"""
+	p =step.param.info.get()
+		
+	a= step.a
+	
+	unit_d = p["unit_mass"]/pow(p["unit_l"],3)
+	
+	return rho/pow(a,3)*unit_d
+		
 ########################################################################
 # mass
 ########################################################################
@@ -108,8 +224,7 @@ def Cell2Meter(x,P,level):
 	p = P.info.get()
 	L = float(p["unit_l"])/3.085677e16
 	dx = pow(2,- level)*L
-	return x*dx
-	
+	return x*dx	
 
 ########################################################################
 # energy
@@ -294,143 +409,40 @@ def farUVbelow912():
 	print B
 	plt.plot(x_in,y_in)
 	plt.show()
-
-########################################################################
-# verification of the DECRAESE_EMMISIVITY_AFTER_TLIFE flag
-########################################################################
-def lower(t,E0):
-	return E0
-def upper(t,tlife,E0):
-	return E0*np.power(t/tlife ,-4.)
-
-def verif():
-	tlife = 10**(6.565)
-	E0 = 10**(52.71)
 	
-	n = 10000
-	t = np.linspace(1e4,1e9,n)
-	y = np.zeros(n)
 
-	E0 = 1.
-	print integrate.quad(lower, 0, tlife, args=(E0,))
-	print integrate.quad(upper, tlife, np.inf,  args=(E0,tlife,))
-	
-	for i in range(n):
-		if t[i]<=tlife :
-			y[i]=lower(t[i],E0)
-		else:
-			y[i]=upper(t[i],tlife,E0)
-
-	plt.plot(np.log10(t),np.log10(y))
-
-	"""
-	mask = np.where(t<tlife)
-	y[mask] = E0 * np.ones(len(mask))
-	
-	mask = np.where(t>=tlife)
-	y[mask] = E0*np.power(t/tlife,-4)* np.ones(len(mask))
-	
-	plt.plot(np.log10(t),np.log10(y))
-	"""
-	
-	plt.show()
-
-
-def verif100000K():
-	x=np.linspace(1e2,1e4,1e4)*1e-10
-	y=black_body(x,50000)/x *1e7 *1e6
-
-	plt.loglog(x*1e10,y,'r')
-	plt.show()
-	
-	
-	
-def getNphot(t):
-	data = np.loadtxt('python/Starburst99/912_inst_e.dat.txt',unpack=True)
-	x=data[0]
-	y=np.power(10,data[1])
-	return np.interp(t,x,y)	
-	
-########################################################################
-## Atomic.h with starburst99 file
-########################################################################
-
-
-def cross_section(egy):
-  P=2.963
-  x=egy/4.298e-1
-  
-  a=(x-1.)**2
-  b=np.power(x,P/2.-5.5)
-  c=np.power(1+np.sqrt(x/3.288e1),-P)
+def miralda_escude_fit(d, redshift):
+    if redshift == 2:
+        a=0.406
+        c=0.558
+        d0=2.54
+        b=2.23
+    elif redshift == 3:
+        a=0.558
+        c=0.599
+        d0=1.89
+        b=2.35
+    elif redshift == 4:
+        a=0.711
+        c=0.611
+        d0=1.53
+        b=2.48
+    elif redshift == 6:
+        a=0.864
+        c=0.880
+        d0=1.09
+        b=2.50
+    elif redshift == -6:
+        #Pawlik fit at z=6 from http://arxiv.org/pdf/0807.3963.pdf
+        a = 3.038
+        c = -0.932
+        d0 = 1.477 
+        b = 3.380 
+    else:
+        print "redshift invalide, available are 2,3,4,6"
+        return None
     
-  return 5.475e4*a*b*c*1e-22*(egy >= 13.6)	# m2
-
-def integEnergy():	
-	filename='python/Starburst99/fig7e.dat.txt'
-
-	#get constant
-	c = Constantes()
-
-	#reading header
-	file = open(filename, 'r')
-	file.readline()
-	file.readline()
-	name=file.readline().split()[2:]
-	file.close()
-	age = [	float(n[:-3]) for n in name]
-	
-	#loading data
-	data = np.loadtxt(filename,unpack=True, skiprows=3)
-	
-	#converting in SI
-	X = data[0]*1e-10 #A->m
-	data[1:]=np.power(10,data[1:]) *1e-7/1e-10 #log(Erg/A) -> J/m/s
-	
-	for num in range(1,len(name)+1):
-
-		#selecting spectrum
-		Y=data[num]
-
-		#keep only ionising photons
-		mask=np.where(X<=912*1e-10) #912A = 13.6eV
-		y=Y[mask]
-		x=X[mask]
-		
-		#integrate total ionising energy
-		Eion= integrate.trapz(y,x) #J/s
-
-		#computing mean photon energy
-		Nphot_per_sec = getNphot(age[num-1]*1e6)
-		#Nphot_by_sec = integrate.trapz(y/lambda2E(x),x)
-		Epho= Eion/Nphot_per_sec
-		
-		#computing nphot/sec/kg
-		nphot=Nphot_per_sec/(1e6*c.M0)
-	
-		#compute photoionisation cross section
-		s_lambda = cross_section(lambda2E(x)/c.eV)
-		
-		#compute sigma N
-		N_lambda = y/lambda2E(x)
-		s_N = integrate.trapz(s_lambda*N_lambda,x) /Nphot_per_sec
-
-		#compute sigma E
-		s_E = integrate.trapz(s_lambda*y,x)/Eion				
-		
-		#printing
-		#print "%3d Myr    Nphot=%e    hnu=%2f*%s    sn=%e    se=%e"%(age[num-1],nphot, Epho/1.602e-19,1.602e-19,s_N,s_E )
-		
-		print "#ifdef STARBURST_%dMYR"%(age[num-1])
-		print "#define SECTION_EFFICACE hnu[0]=%2f*1.6022e-19;alphae[0]=%e*c;alphai[0]=%e*c;"%(Epho/c.eV,s_N,s_E )
-		print "#define FACTGRP factgrp[0]=1.0;"
-		print "#define SRCINT (%e)"%(nphot)
-		print "#endif"
-		
-		#ploting
-#		plt.loglog(X,Y,'k--')
-#		plt.loglog(x,y, label="%d Myr"%(age[num-1]))
-#		plt.legend()
-#	plt.show()
-	
-
+    d23 = np.power(d,-2./3.)
+    up = np.power(d23-c,2.)
+    down = 2. * np.power(2./3.*d0,2.)    
+    return a * np.exp(-up/down) *np.power(d,-b)

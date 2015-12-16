@@ -1,6 +1,7 @@
 import sys, os
 import numpy as np
 import IO
+import matplotlib.pylab as plt
 
 class Part : 
 	def __init__(self,N,type):
@@ -55,7 +56,7 @@ class Part :
 		if self.isStar :
 			self.age = np.append(self.age, part.age)
 			
-	def plot(part,axe1="x",axe2="y",**kwargs):
+	def plot(self,axe1="x",axe2="y",**kwargs):
 		axes = {}
 		axes["x"] = self.x
 		axes["y"] = self.y
@@ -136,3 +137,25 @@ def read(filename):
 	return Ntot,a,parts
 
 
+"""
+def read(filename):
+	
+	if "star." in filename:
+		star = 1
+	else:
+		star = 0
+	s = 10 + star
+	
+	print "Reading file ", filename		
+	N,a,data=read1proc(filename	)
+	print  N, "Particles"
+	parts = Part(N, star)
+	
+	i = 0
+	for j in range(0,data.shape[0],s):
+		parts.define(data[j:j+s] ,i )
+		i+=1
+
+	print 'Read OK'
+	return N,a,parts
+"""

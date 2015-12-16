@@ -3,49 +3,45 @@ import sys,os
 
 import IO
 
-def genFiles(filename):
+def genFiles(step):
 
-	if not "part." in filename:
-		print "HOP need a particle file"
-		print "file given : ", filename
-		sys.exit(1)
+	filename = step.part_path
 
 	folder  = "utils/hop/"
 
 	outname = filename[:-10]  + "halo" + filename[-6:]
 
-	genDen(folder, filename, outname)
-	genTag(folder, filename, outname)
+	genDen(folder,step)
+	genTag(folder,step)
 	#genPos(folder, outname)
 	
 ########################################################################
-def genDen(folder, filename, outname):
+def genDen(folder,step):
+	
+	filename = step.part_path
+	outname = step.halo_path
+
 	try :
-		file = open(outname + ".den", "rb")
-		file.close()
+		open(outname + ".den", "rb")
 	except  IOError:
-		nproc = IO.getNproc(filename)
+		nproc = step.nproc
 		commande="./" + folder + "hop -in " + filename + " -o " + outname +" -p 1 -nf " + str(nproc)
 		print commande
 		os.system(commande)
 		
-def readDen(filename):
+def readDen(filename, step):
+
 	denname = filename[:-10]  + "halo" + filename[-6:] + ".den"
 	
 	try :
-		file = open(denname, "rb")
+		open(denname,"rb")
 	except  IOError:
-		genFiles(filename)
-		file = open(denname, "rb")
+		genFiles(step)
 		
-	denname = filename[:-10]  + "halo" + filename[-6:] + ".den"
-
-	file = open(denname, "rb")
 	print "Reading file", denname
-
+	file = open(denname, "rb")
 	N = np.fromfile(file, dtype=np.int32   ,count=1)[0]
 	den = np.fromfile(file, dtype=np.float32 ,count=N)
-	
 	file.close()
 
 	print "Read OK"
@@ -53,7 +49,9 @@ def readDen(filename):
 
 ########################################################################
 
-def genTag(folder, filename, outname):
+def genTag(folder, step):
+	filename = step.part_path
+	outname = step.halo_path
 	try :
 		file = open(outname + ".tag", "rb")
 		file.close()

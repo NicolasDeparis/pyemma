@@ -7,7 +7,7 @@ import pickle
 
 import IO
 import part
-import kdtree as kd
+#import kdtree as kd
 import hop
 import physique
 import param
@@ -29,7 +29,7 @@ class Halo:
 		self.t=0
 		self.file=""
 		
-		#self.step=
+		#self.step=	
 		self.folder=""
 		
 		self.N=ngrp
@@ -48,10 +48,22 @@ class Halo:
 		return self.mass
 	def getMstar(self):
 		return self.starmass
+	def hasstar(self):
+		return np.where(self.starmass!=0)[0]
+	def getM_u(self,n):
+		return self.mass[n]
+	def getMstar_u(self,n):		
+		return self.starmass[n]
+	def getR_u(self,n):		
+		return self.R[n]
+		
 	def toFile(self,name):
 		with open(name, 'wb') as output:		
-			pickle.dump(self, output, pickle.HIGHEST_PROTOCOL)	
-					
+				pickle.dump(self, output, pickle.HIGHEST_PROTOCOL)	
+	def getPos(self,n):
+		return self.x[n],self.y[n],self.z[n]
+	
+		
 	def getCubeLimit(self,n):
 		R=self.R[n]
 		xmin=self.x[n] - R
@@ -67,6 +79,7 @@ class Halo:
 		level=7
 		Map=p.getSlice(file,level, xmin=xmin, xmax=xmax ,ymin=ymin, ymax=ymax ,zmin=zmin, zmax=zmax , **kwargs)
 		return bound,Map
+		
 	def extractCube(self,data,halo_number,level):
 		bound= self.getCubeLimit(halo_number)
 		xmin,xmax,ymin,ymax,zmin,zmax = bound
@@ -201,27 +214,108 @@ class Halo:
 			N_dot+=photStar
 		return N_dot*1e50
 
-	def getLuminosity(self,n):
-		modelmag, modelage = lum.getModel()		
-		return lum.sumMag(self.star[n].mass, self.star[n].age, modelmag, modelage)
+	def getLuminosity(self,n, step):
 
-	def SFR(self,n,folder,**kwargs):
-		z,fr = sfr.getFromPop(self.star[n],folder)
+		modelmag, modelage = lum.getModel()		
+				
+		age = (physique.a2t(step.a) - self.star[n].age)		
+		mass = 	physique.m2mo(self.star[n].mass, step.param)/1e6
+	
+		mags=np.interp(age,modelage,modelmag)	
+		
+		flux = mass * lum.mag2flux(mags)
+		tot_flux = np.sum(flux)	
+		tot_mag = lum.flux2mag(tot_flux)
+
+		return tot_mag
+				
+
+	def SFR(self,n,step,**kwargs):
+		z,fr = sfr.getFromPop(self.star[n],step.param)
 		plt.plot(z,fr,**kwargs)
 		plt.yscale("log")
 		plt.legend()
 		
+	def get_baryon_mass(self,halo_number,s):
+		lim= self.getCubeLimit(halo_number)
+
+		dx= lim[1] - lim[0]
+		dy= lim[3] - lim[2]
+		dz= lim[5] - lim[4]
+		x_centre,y_centre,z_centre = self.getPos(halo_number)
+
+		fact=0.5
+		xmin=x_centre-fact*dx; xmax=x_centre+fact*dx
+		ymin=y_centre-fact*dy; ymax=y_centre+fact*dy
+		zmin=z_centre-fact*dz; zmax=z_centre+fact*dz
+
+		level = 10
+
+		data = amr.getCube(s.grid_path,level, field="field.d", force=1,
+						xmin=xmin, xmax=xmax,
+						ymin=ymin, ymax=ymax,
+						zmin=zmin, zmax=zmax)
+		data = data.getData()
+		
+		#data=data[np.where(data!=0)] 
+
+		V=0.5**(3*level)
+		return np.sum(data)*V
+		
+def get_all_baryon_mass(step):
+	
+	halo = read(step)
+	n=halo.getN()
+	bm=np.zeros(n)
+	
+	for i in range(n):
+		bm[i] = halo.get_baryon_mass(i,step)
+	
+	return bm
+		
+########################################################################
+## Luminosity fonction
+########################################################################
+
+
+def luminosity(step):
+	
+	#folder = step.part_folder
+	#p = param.ParamsInfo(step.number, step.step_folder).get()
+	#cst=physique.Constantes()
+	#u_mass=p["unit_mass"]/cst.M0
+	
+	#name = np.where( [".p00000" in n for n in os.listdir(folder)])[0]
+	#a = part.geta(folder+os.listdir(folder)[name])
+	#t= physique.a2t(a)	
+	
+	halo = read(step)
+	
+	n=halo.getN()
+	mh=np.zeros(n,dtype=np.float64)
+	lum=np.zeros(n,dtype=np.float64)
+	
+	for iHalo in range(n):
+		lum[iHalo] = halo.getLuminosity(iHalo,step)
+	
+	return lum
+		
 ####################################################################################################
 ####################################################################################################
 	
-def read(name):	
-	try :
-		with open(name, 'rb') as input:
-			return pickle.load(input)			
+def read(step):
+
+	try:
+		with open(step.halo_path + ".halo", 'rb') as input:
+			return pickle.load(input)
 	except  IOError:
-		genFiles(name)
-		
-def getCenter(halo,den):
+		genFiles(step)
+		with open(step.halo_path + ".halo", 'rb') as input:
+			return pickle.load(input)
+
+
+
+def getCenter(halo,den):	
 	"""return the center of a halo"""
 	pos=np.argmax(den)
 	x  = halo.x[pos]
@@ -258,16 +352,17 @@ def genTree(file,part,type):
 		tree.WriteToFile(name)	
 	return tree
 
-def genFiles(file):
+def genFiles(step):
 	"""reduce data and save file"""
 	
+	file=step.part_path
 	name=file.replace("part.","halo.")+ ".halo"
 	
 	try :
 		with open(name): pass
 	except  IOError:
 
-		npartden, den = hop.readDen(file)
+		npartden, den = hop.readDen(file,step)
 		nparttag, ngrp, tag = hop.readTag(file)
 		npart,a,part_all = part.read(file)
 		nstar,a,star_all = part.read(file.replace("part","star"))
@@ -279,19 +374,26 @@ def genFiles(file):
 			mask  = np.where(tag==iHalo)
 	
 			part_halo=getHalo(part_all,mask)
+			halo.part[iHalo]=part_halo
+			
 			center = getCenter(part_halo,den[mask])
-			R200 = getR200(part_halo)
-			star_halo = getStar(center,R200,star_all,tree)
-
 			halo.x[iHalo]=center[0]
 			halo.y[iHalo]=center[1]
 			halo.z[iHalo]=center[2]
-			halo.mass[iHalo]=np.sum(part_halo.mass)
-			halo.starmass[iHalo]=np.sum(star_halo.mass)
-
+			
+			R200 = getR200(part_halo)
 			halo.R[iHalo]=R200
-			halo.part[iHalo]=part_halo
+			
+			star_halo = getStar(center,R200,star_all,tree)
 			halo.star[iHalo]=star_halo
+			halo.starmass[iHalo]=np.sum(star_halo.mass)
+			
+			halo.mass[iHalo]=np.sum(part_halo.mass)
+			
+
+			
+			
+			
 		halo.toFile(name)
 		
 
@@ -307,20 +409,27 @@ def plotStar(star,axe1="x",axe2="y",**kwargs):
 	y=axes[axe2]
 	plt.plot(x,y,'.',**kwargs)
 
-def plotAll(file,axe1="x",axe2="y",**kwargs):
+def plotAll(step,axe1="x",axe2="y",**kwargs):
+	
+	file = step.part_folder
 	name=file.replace("part.","halo.")+ ".halo"
-	halo = read(name)
-	nstar,a,star = part.read(file.replace("part","star"))
+	halo = read(step)
+	nstar,a,star = part.read(step.star_path)
 	
 	mtot_star= np.sum(star.mass)
 
 	fig=plt.figure()
 	ax = fig.add_subplot(1,1,1)
 	
-	for iHalo in range(halo.getN()):
-		halo.plot(ax,iHalo,axe1,axe2)
-		halo.plotPart(iHalo,axe1,axe2,c='k')
 	
+	#hasstar=halo.hasstar()
+	
+	for iHalo in range(halo.getN()):
+		
+		halo.plot(ax,iHalo,axe1,axe2)
+		#halo.plotPart(iHalo,axe1,axe2,c='k')
+	
+	"""
 	plotStar(star,axe1,axe2,c='r')
 	
 	mstar_halo=0
@@ -331,34 +440,97 @@ def plotAll(file,axe1="x",axe2="y",**kwargs):
 		
 	#print nstar_halo/mtot_star
 	plt.title("%s\t%s%s"%(file,axe1,axe2))
+	"""
 	plt.xlim(0,1)
 	plt.ylim(0,1)
 
-def plotOne(file,	halo_number,axe1="x",axe2="y", **kwargs):
+def plotAll_compare(step1, step2,axe1="x",axe2="y",**kwargs):
 	
+	file = step1.part_folder
 	name=file.replace("part.","halo.")+ ".halo"
-	halo = read(name)
+	halo = read(step1)
+	nstar,a,star = part.read(step1.star_path)
+	
+	mtot_star= np.sum(star.mass)
 
-	nstar,a,star_all = part.read(file.replace("part","star"))
-	tree=genTree(file,star_all,"star")
+	fig=plt.figure()
+	ax = fig.add_subplot(1,2,1)
+	ax.set_aspect(1, adjustable="datalim")
+	
+	for iHalo in range(halo.getN()):
+		halo.plot(ax,iHalo,axe1,axe2)
+		halo.plotPart(iHalo,axe1,axe2,c='k')
+	
+	plotStar(star,axe1,axe2,c='r')
+	
+	mstar_halo=0
+	for iHalo in range(halo.getN()):
+		halo.plotStar(iHalo,axe1,axe2,c='g')
+		#halo.plotNumber(ax,iHalo,axe1,axe2,)
+		mstar_halo+=np.sum(halo.star[iHalo].mass)	
+		
+	#print nstar_halo/mtot_star
+	plt.title("%s\t%s%s"%(file,axe1,axe2))
+	plt.xlim(0,1)
+	plt.ylim(0,1)
+
+
+	file = step2.part_folder
+	name=file.replace("part.","halo.")+ ".halo"
+	halo = read(step2)
+	nstar,a,star = part.read(step2.star_path)
+	
+	mtot_star= np.sum(star.mass)
+
+	ax2 = fig.add_subplot(1,2,2,sharex=ax, sharey=ax)
+	ax2.set_aspect(1, adjustable="datalim")
+
+	for iHalo in range(halo.getN()):
+		halo.plot(ax2,iHalo,axe1,axe2)
+		halo.plotPart(iHalo,axe1,axe2,c='k')
+	
+	plotStar(star,axe1,axe2,c='r')
+	
+	mstar_halo=0
+	for iHalo in range(halo.getN()):
+		halo.plotStar(iHalo,axe1,axe2,c='g')
+#		halo.plotNumber(ax,iHalo,axe1,axe2,)
+		mstar_halo+=np.sum(halo.star[iHalo].mass)	
+		
+	#print nstar_halo/mtot_star
+	plt.title("%s\t%s%s"%(file,axe1,axe2))
+	plt.xlim(0,1)
+	plt.ylim(0,1)
+
+
+def plotOne(ste,	halo_number,axe1="x",axe2="y", **kwargs):
+	
+	
+	halo = read(ste)
+
+	nstar,a,star_all = part.read(ste.star_path)
+	tree=genTree(ste.part_folder,star_all,"star")
 	
 	center=(halo.x[halo_number],halo.y[halo_number],halo.z[halo_number])
 	R200=halo.R[halo_number] *1
-	print file, "R200=%e"%R200
+	
+	print center,R200
+	print ste.run_folder, "R200=%e"%R200
 	
 	star_halo = getStar(center,R200,star_all,tree)
 
 	fig=plt.figure()
-	plt.title(file)
+	
 	ax = fig.add_subplot(1,1,1)
 
-
+	
 	halo.plot(ax,halo_number,axe1,axe2)
 	halo.plotNumber(ax,halo_number,axe1,axe2,)
 	
 	halo.plotPart(halo_number,axe1,axe2,c='k')
 	plotStar(star_halo,axe1,axe2,c='r')
 	halo.plotStar(halo_number,axe1,axe2,c='g')
+	
 
 
 def getfield(step,halo_number,field, **kwargs):
@@ -372,7 +544,7 @@ def getfield(step,halo_number,field, **kwargs):
 def barionique_fraction(step, **kwargs):
 
 	name=step.part_path.replace("part.","halo.")+ ".halo"
-	halo = read(name)
+	halo = read(step)
 
 	level=7
 	force=0
@@ -397,12 +569,12 @@ def barionique_fraction(step, **kwargs):
 		dy=ymax-ymin
 		dz=zmax-zmin
 		v = dx*dy*dz
-		Mb[i] = np.sum(cube)*v
-		#if v:
-		#	print dx,dy,dz, cube
-		#	Mb[i] = np.max(cube)
-		
-		Mdm[i] = halo.getDMinR200(halo_number)
+		#Mb[halo_number] = np.sum(cube)*v
+		if v:
+			print dx,dy,dz, cube
+			#Mb[halo_number] = np.max(cube)
+			Mb[halo_number] = np.sum(cube)*v
+		Mdm[halo_number] = halo.getDMinR200(halo_number)
 
 	bf = Mb/Mdm
 		
@@ -518,11 +690,13 @@ def compare_field(step1,step2,halo_number,axe1="x",axe2="y", **kwargs):
 
 	plt.show()
 
-def plotOne3D(file,	halo_number,axe1="x",axe2="y", **kwargs):
+def plotOne3D(cur_step,	halo_number,axe1="x",axe2="y", **kwargs):
+	
+	file = cur_step.part_folder
 	name=file.replace("part.","halo.")+ ".halo"
-	halo = read(name)
+	halo = read(cur_step)
 
-	nstar,a,star_all = part.read(file.replace("part","star"))
+	nstar,a,star_all = part.read(cur_step.star_folder)
 	tree=genTree(file,star_all,"star")
 	
 	center=(halo.x[halo_number],halo.y[halo_number],halo.z[halo_number])
@@ -600,15 +774,18 @@ def test3D(file, **kwargs):
 	halo.plotStar3D(ax,halo_number,c='r')
 	
 	
-		
+
+	
+	
 ########################################################################
-## Luminosity fonction
+## mass fonction
 ########################################################################
 
 
-def luminosity(file):
-	folder,filename = IO.splitPath(file)
-	p = param.ParamsInfo(folder).get()
+def mass(step):
+	
+	folder = step.grid_folder
+	p = param.ParamsInfo(step.number, step.step_folder).get()
 	cst=physique.Constantes()
 	u_mass=p["unit_mass"]/cst.M0
 	
@@ -616,7 +793,8 @@ def luminosity(file):
 	a = part.geta(folder+os.listdir(folder)[name])
 	t= physique.a2t(a)
 	
-	halo = read(file.replace("part.","halo.")+ ".halo")
+	halo = read(step.halo_path + ".halo")
+	 
 	n=halo.getN()
 	
 	mh=np.zeros(n, dtype=np.float64)
@@ -643,7 +821,6 @@ def luminosity(file):
 	
 	print mh,lum
 	plt.loglog(mh,lum,'o')
-	
 	
 ####################################################################################################
 ####################################################################################################
