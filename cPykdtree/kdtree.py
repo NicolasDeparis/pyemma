@@ -227,7 +227,7 @@ class Tree:
         return ind, dist
 
 
-    def locatenear( self, point, r, nmax=100000):
+    def locatenear( self, point, r, nmax=10000000):
         """
         Find all points within r of an arbitrary point x:
              nblist, dist = tree.locatenear(x,r)
@@ -295,7 +295,7 @@ if __name__ == "__main__":
 
     N=1000000
 
-    print "Generating coordinates"
+    print ("Generating coordinates")
     x = 2*np.random.random(N) -1
     y = 2*np.random.random(N) -1
     # z = 2*np.random.random(N) -1
@@ -309,12 +309,12 @@ if __name__ == "__main__":
 
 
     # Writing it to a file
-    print "Writing to a file..."
+    print ("Writing to a file...")
     tree0.WriteToFile("test_tree.kd")
     t2 = time.time()
 
     # Reading it back into another tree
-    print "Reading from the file..."
+    print ("Reading from the file...")
     tree = Tree.FromFile("test_tree.kd")
     t3 = time.time()
 
@@ -340,16 +340,16 @@ if __name__ == "__main__":
 
     # Testing locatenear:
     if (testing=="locatenear"):
-        print "Testing locatenear:"
-        print "   We pick coordinates, then use the locatenear function"
-        print "   to get all tree members within a chosen radius of these"
-        print "   coordinates.\n.... "
+        print ("Testing locatenear:")
+        print ("   We pick coordinates, then use the locatenear function")
+        print ("   to get all tree members within a chosen radius of these")
+        print ("   coordinates.\n.... ")
         
         point=[0.2,0.2]     # Central point
         radius=0.01        # Maximum distance to the point
         ind , dist = tree.locatenear(point,radius)
 
-        print "Plotting..."
+        print ("Plotting...")
         fig=plt.figure(1)
         ax=fig.add_subplot(111)
         x,y = tree.vectors()
@@ -373,13 +373,13 @@ if __name__ == "__main__":
         for i in ind:
             ax.plot([x[i],x[i]]
                     ,[y[i],y[i]],'ro')
-        print "Done."
+        print ("Done.")
         plt.show()
 
 
     # Testing nnearest:
     if (testing=="nnearest"):
-        print "Testing nnearest"
+        print ("Testing nnearest")
         fig=plt.figure(1)
         ax=fig.add_subplot(111)
         x,y = tree.vectors()
@@ -390,8 +390,8 @@ if __name__ == "__main__":
 
         # Getting the indexes and distance to the Nnb closest particles
         ind, dist =tree.nnearest(index, Nnb)
-        print "ind :", ind
-        print "dist :", dist
+        print ("ind :", ind)
+        print ("dist :", dist)
         # Rescaling the plot to have a good view of the circle
         zoom=0.5
         maxdist = np.max(dist)
@@ -416,7 +416,7 @@ if __name__ == "__main__":
 
     # Testing nearest:
     if (testing=="nearest"):
-        print "Testing nearest"
+        print ("Testing nearest")
         fig=plt.figure(1)
         ax=fig.add_subplot(111)
         x,y = tree.vectors()
@@ -433,7 +433,3 @@ if __name__ == "__main__":
         # Plotting closest particle in red
         ax.plot([x[ind],x[ind]],[y[ind],y[ind]],'ro')
         plt.show()
-
-
-
-
