@@ -1,4 +1,5 @@
 import os
+import numpy as np
 
 import hop
 import param
@@ -24,7 +25,7 @@ class Run:
 				continue
 				
 			key="step_%05d"%stepnum
-			val= step.Step(stepnum, self.data_folder)
+			val= Step(stepnum, self.data_folder)
 			setattr(self,key,val)
 		
 		self.param=param.Param(self.folder)
@@ -48,7 +49,7 @@ class Step:
 class Fields:
 	def __init__(self, number,folder, sets_type):
 		"""			
-			Create a set of fields object
+		Create a set of fields object
 		"""
 		
 		self.number=number		
@@ -65,10 +66,13 @@ class Fields:
 		for cur_folder in  os.listdir(path):
 			if self.type in cur_folder:
 				key=cur_folder[5:].replace(".","_")
-				val= field.Field(folder,number,cur_folder)
+				val= Field(folder,number,cur_folder)
 				setattr(self,key,val)
 	
 class Field():
+	"""
+	Fields object
+	"""
 	def __init__(self,runpath,stepnum,field):
 		self.runpath=runpath     
 		self.stepnum=stepnum
