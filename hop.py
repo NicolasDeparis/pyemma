@@ -20,7 +20,7 @@ class Hop:
 		
 		self.nproc=getnproc(self.folder)
 		
-		self.den_name = self.path + ".den"
+		self.den_name = self.path + ".den"	
 		self.tag_name = self.path + ".tag"
 		self.den_isloaded=False
 		self.tag_isloaded=False		

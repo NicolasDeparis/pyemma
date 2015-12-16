@@ -26,19 +26,6 @@ class Field():
 			tsim = np.fromfile(file, dtype=np.float32  ,count=1)[0]        
 			bound= np.fromfile(file, dtype=np.float32  ,count=6)
 
-			#print(xmin,xmax,ymin,ymax,zmin,zmax)			
-			#print(bound[4],zmin,bound[4]<=zmin)
-			#print(bound[5],zmax,bound[5]>=zmax)
-
-
-			#print(bound[0],xmin,bound[0]<=xmin)
-			#print(bound[1],xmax,bound[1]>=xmax)
-			#print (bound[0]<=xmin or bound[1]>=xmax)
-			#print (bound[4]<=zmin and bound[5]>=zmax)
-			#print (bound[4]<=zmin and bound[5]>=zmax)
-			
-			#if ( bound[0]<=xmin or bound[1]>=xmax or bound[2]<=ymin or  bound[3]>=ymax or bound[4]<=zmin or bound[5]>=zmax ):
-			
 			bx= bound[0]>self.xmax or bound[1]<self.xmin
 			by= bound[2]>self.ymax or bound[3]<self.ymin
 			bz= bound[4]>self.zmax or bound[5]<self.zmin
