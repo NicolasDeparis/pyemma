@@ -2,7 +2,6 @@ import os
 import numpy as np
 
 import hop
-import param
 
 def getnproc(path):	
 	try:
@@ -27,7 +26,7 @@ class Run:
 			val= Step(stepnum, self._data_folder)
 			setattr(self,key,val)
 		
-		self.param=param.Param(self._folder)
+		self.param=Param(self._folder)
 		
 class Step:
 	def __init__(self,number,folder):
@@ -109,9 +108,87 @@ class Field():
 		self._bound=[]
 
 		for proc in range(getnproc(self._field_folder)):
-			N1proc,tsim,bound1proc,data1proc=self._read1proc(self._filename + ".p"+ str(proc).zfill(5))
+			cur_name = self._filename + ".p"+ str(proc).zfill(5)
+			N1proc,tsim,bound1proc,data1proc=self._read1proc(cur_name)
 			self._N+=N1proc
 			self._tsim=tsim            
 			self._bound=np.append(self._bound,bound1proc)
 			self.data=np.append(self.data,data1proc)        
+
+########################################################################
+########################################################################
+
+class Info:
+	def __init__(self, folder):
+
+		filename = "%s%s"%(folder,"data/param.info")
+		f = open(filename)
+
+		for line in f:
+			if line[0]!="#":
+				(key, val) = line.split()
+				try :
+					val=np.float64(val)
+				except ValueError:
+					pass
+				setattr(self,key,val)
+
+class RunParam:
+	def __init__(self,folder):
+
+		filename = "%s%s"%(folder,"SRC/param.run")
+		f = open(filename)
+
+		for line in f:
+			if line[0]!="#":
+				(key, val) = line.split()
+				try :
+					val=np.float64(val)
+				except ValueError:
+					pass
+				setattr(self,key,val)
+
+class FieldAvg:
+	def __init__(self,folder,field):
+		filename = "%s%s%s"%(folder,"data/avg/",field)
+		f = open(filename)
+				
+		data= np.loadtxt(filename,unpack=True)
+		setattr(self,"a",data[0])
+		setattr(self,"mean",data[1])
+		setattr(self,"sigma",data[2])
+		setattr(self,"min",data[3])
+		setattr(self,"max",data[4])		
+
+class Avg:	
+	def __init__(self,folder):
+		filename = "%s%s"%(folder,"data/param.avg")
+		f = open(filename)
+		header=f.readline().split("\t")
+		data= np.loadtxt(filename,skiprows=1,unpack=True)
+
+		i=0
+		for field in header:
+			if (field !='')&(field !='\n') :				
+				try:
+					setattr(self,field,data[i])
+				except IndexError:
+					pass
+				i+=1
+
+		for cur_folder in  os.listdir(folder+"data/avg/"):
+			try:
+				key = cur_folder.replace(".","_")
+				val = FieldAvg(folder,cur_folder)
+				setattr(self,key,val)
+			except IndexError:				
+				pass
+					
+class Param:
+	def __init__(self,folder):
+		#print("Reading param")
+		self.run=RunParam(folder)
+		self.avg=Avg(folder)
+		self.info=Info(folder)		
+		
 
