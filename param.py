@@ -48,9 +48,8 @@ class Avg:
 					#print ("WARNING : Problem while reading param.avg")
 					pass
 				i+=1
-				
 
-class Field:
+class FieldAvg:
 	def __init__(self,folder,field):
 		filename = "%s%s%s"%(folder,"data/avg/",field)
 		f = open(filename)
