@@ -24,7 +24,7 @@ get_ipython().magic('autoreload 2')
 get_ipython().magic('connect_info')
 
 
-# In[2]:
+# In[4]:
 
 runset=db.Runset()
 runset.load()
@@ -32,28 +32,40 @@ runset.get_description()
 runset.get_folder()
 
 
-# In[168]:
+# In[23]:
 
 run1=io.Run(runset.runs[10].folder) 
 
 
-# In[260]:
+# In[24]:
 
 print(runset.runs[0].labels)
 cur_run=run1
 cur_step=cur_run.step_00017
 
 
-# In[205]:
+# In[17]:
 
-run2=io.Run(runset.runs[1].folder)
+run2=io.Run(runset.runs[4].folder)
 
 
-# In[256]:
+# In[18]:
 
 print(runset.runs[1].labels)
 cur_run=run2
 cur_step=cur_run.step_00016
+
+
+# In[27]:
+
+run3=io.Run(runset.runs[4].folder)
+
+
+# In[28]:
+
+
+cur_run=run3
+cur_step=cur_run.step_00020
 
 
 # In[10]:
@@ -143,7 +155,7 @@ plt.ylabel("DM density")
 
 # # STELLAR PROFILE
 
-# In[ ]:
+# In[8]:
 
 n=2
 nbins=32
@@ -153,6 +165,8 @@ plt.figure()
 
 arg= np.argsort(cur_step.fof.npart)
 halo_num=arg[-n]
+
+cur_step.fof.get_star(cur_step.star)
 
 xc=cur_step.fof.x[halo_num]
 yc=cur_step.fof.y[halo_num]
@@ -607,7 +621,7 @@ plt.legend(loc=4)
 plt.xlim(0,1)
 
 
-# In[258]:
+# In[29]:
 
 cur_step.grid.x.read()
 cur_step.grid.y.read()
@@ -622,7 +636,7 @@ cur_step.star.z.read
 cur_step.fof.get_cells(cur_step.grid)
 cur_step.fof.get_part_mass_fine()
 cur_step.fof.get_star(cur_step.star)
-cur_step.fof.get_luminosity(cur_step)
+cur_step.fof.get_luminosity_UV(cur_step)
 
 
 Nbins=4
@@ -673,7 +687,7 @@ for i in range(Nbins):
         z=cur_step.star.z.data[stars]-zc
         
         star_r= np.sqrt( np.power(x,2)+np.power(y,2)+np.power(z,2)) / cur_step.fof.R200[halo_num]
-        star_m= cur_step.star.flux[stars] 
+        star_m= cur_step.star.flux_UV[stars] 
         
         star_r_bin.append(star_r)
         star_m_bin.append(star_m)
@@ -685,34 +699,234 @@ for i in range(Nbins):
     flux_m_tot[i]=np.concatenate(flux_m_bin)
 
 
-# In[259]:
+# In[116]:
 
 plt.figure()
 
-for i in range(Nbins):
+labels=["1/64", "1/8","1/512"]
 
-    nbins=16
-    bins=np.linspace(0,1,nbins+1)
-    _x=(bins[1:]+bins[:-1])/2
 
-    star_n1,_=np.histogram(star_r_tot[i],bins=bins)
-    star_h11,_=np.histogram(star_r_tot[i],bins=bins,weights=star_m_tot[i])
-    star_h11/=star_n1
+for istep, cur_step in enumerate([run2.step_00016, run1.step_00017, run3.step_00020]):
+
+#     cur_step.grid.x.read()
+#     cur_step.grid.y.read()
+#     cur_step.grid.z.read()
+#     cur_step.grid.rfield_fx0.read()
+#     cur_step.grid.rfield_fy0.read()
+#     cur_step.grid.rfield_fz0.read()
+#     cur_step.star.x.read()
+#     cur_step.star.y.read()
+#     cur_step.star.z.read
+
+#     cur_step.fof.get_cells(cur_step.grid)
+#     cur_step.fof.get_part_mass_fine()
+#     cur_step.fof.get_star(cur_step.star)
+#     cur_step.fof.get_luminosity_UV(cur_step)
+
+    Nbins=2
+
+    mh=cur_step.fof.part_mass_fine
+    # Mbins=np.logspace(np.log10(np.min(mh)), np.log10(np.max(mh)), Nbins+1)
+    Mbins=np.logspace(8,12,Nbins+1)
     
-    flux_n1,_=np.histogram(flux_r_tot[i],bins=bins)
-    flux_h11,_=np.histogram(flux_r_tot[i],bins=bins,weights=flux_m_tot[i])
-    flux_h11/=flux_n1
+    flux_r_tot=np.empty(Nbins,dtype=np.object)
+    flux_m_tot=np.empty(Nbins,dtype=np.object)
+
+    star_r_tot=np.empty(Nbins,dtype=np.object)
+    star_m_tot=np.empty(Nbins,dtype=np.object)
+
+    for i in range(Nbins):
+
+        flux_r_bin=[]
+        flux_m_bin=[]
+        star_r_bin=[]
+        star_m_bin=[]
+
+        for halo_num in np.where( (mh>=Mbins[i])  & (mh<Mbins[i+1]) )[0] :
+
+            xc=cur_step.fof.x[halo_num]
+            yc=cur_step.fof.y[halo_num]
+            zc=cur_step.fof.z[halo_num]
+
+            cells=cur_step.fof.cells[halo_num]
+
+            x=cur_step.grid.x.data[cells]-xc
+            y=cur_step.grid.y.data[cells]-yc
+            z=cur_step.grid.z.data[cells]-zc
+
+            u=cur_step.grid.rfield_fx0.data[cells]
+            v=cur_step.grid.rfield_fy0.data[cells]
+            w=cur_step.grid.rfield_fz0.data[cells]
+
+            flux_r= np.sqrt( np.power(x,2)+np.power(y,2)+np.power(z,2)) / cur_step.fof.R200[halo_num]
+            flux_m=(x*u+y*v+z*w)/flux_r * (4*np.pi*np.power(flux_r,2))
+
+            flux_r_bin.append(flux_r)
+            flux_m_bin.append(flux_m)
+
+            stars=cur_step.fof.stars[halo_num]
+
+            x=cur_step.star.x.data[stars]-xc
+            y=cur_step.star.y.data[stars]-yc
+            z=cur_step.star.z.data[stars]-zc
+
+            star_r= np.sqrt( np.power(x,2)+np.power(y,2)+np.power(z,2)) / cur_step.fof.R200[halo_num]
+            star_m= cur_step.star.flux_UV[stars] 
+
+            star_r_bin.append(star_r)
+            star_m_bin.append(star_m)
+
+        star_r_tot[i]=np.concatenate(star_r_bin)
+        star_m_tot[i]=np.concatenate(star_m_bin)
+
+        flux_r_tot[i]=np.concatenate(flux_r_bin)
+        flux_m_tot[i]=np.concatenate(flux_m_bin)
     
-    star_h11=np.cumsum(star_h11)
+    color = [ 'b', 'g',  'r']
+    for i in range(Nbins):
 
-    lab= ("%.1e <Mh< %.1e"%(Mbins[i],Mbins[i+1] ))
-    plt.errorbar(_x,flux_h11/star_h11, label=lab)
+        nbins=2
+        bins=np.linspace(0,1,nbins+1)
+        _x=(bins[1:]+bins[:-1])/2
 
+        star_n1,_=np.histogram(star_r_tot[i],bins=bins)
+        star_h11,_=np.histogram(star_r_tot[i],bins=bins,weights=star_m_tot[i])
+        star_h11/=star_n1
+
+        flux_n1,_=np.histogram(flux_r_tot[i],bins=bins)
+        flux_h11,_=np.histogram(flux_r_tot[i],bins=bins,weights=flux_m_tot[i])
+        flux_h11/=flux_n1
+
+        star_h11=np.cumsum(star_h11)
+
+        #lab= ("%.1e <Mh< %.1e"%(Mbins[i],Mbins[i+1] ))
+        plt.plot(_x,flux_h11/star_h11, ':o',  label=lab, c=color[istep])
+
+                
 plt.yscale("log")
 plt.ylabel("")
-plt.title("")
-plt.legend(loc=0)
+
 
 plt.xlim(0,1)
-plt.ylim(1e-11,1e-5)
+# plt.ylim(1e-57,1e-51)
+
+
+# In[168]:
+
+plt.figure()
+
+labels=["1/64", "1/8","1/512"]
+
+
+for istep, cur_step in enumerate([run2.step_00016, run1.step_00017, run3.step_00020]):
+# for istep, cur_step in enumerate([run2.step_00016]):
+
+#     cur_step.grid.x.read()
+#     cur_step.grid.y.read()
+#     cur_step.grid.z.read()
+#     cur_step.grid.rfield_fx0.read()
+#     cur_step.grid.rfield_fy0.read()
+#     cur_step.grid.rfield_fz0.read()
+#     cur_step.star.x.read()
+#     cur_step.star.y.read()
+#     cur_step.star.z.read
+
+#     cur_step.fof.get_cells(cur_step.grid)
+#     cur_step.fof.get_part_mass_fine()
+#     cur_step.fof.get_star(cur_step.star)
+#     cur_step.fof.get_luminosity_UV(cur_step)
+
+    Nbins=2
+
+    mh=cur_step.fof.part_mass_fine
+#     Mbins=np.logspace(np.log10(np.min(mh)), np.log10(np.max(mh)), Nbins+1)
+    Mbins=np.logspace(8,12,Nbins+1)
+
+    for i in range(Nbins):
+
+        flux_r_bin=[]
+        flux_m_bin=[]
+        star_r_bin=[]
+        star_m_bin=[]
+        fesc_r_bin=[]
+        fesc_m_bin=[]
+        for halo_num in np.where( (mh>=Mbins[i])  & (mh<Mbins[i+1]) )[0] :
+
+            xc=cur_step.fof.x[halo_num]
+            yc=cur_step.fof.y[halo_num]
+            zc=cur_step.fof.z[halo_num]
+#_________________________________________________________________________________________________
+            
+            cells=cur_step.fof.cells[halo_num]
+
+            x=cur_step.grid.x.data[cells]-xc
+            y=cur_step.grid.y.data[cells]-yc
+            z=cur_step.grid.z.data[cells]-zc                        
+            
+            u=cur_step.grid.rfield_fx0.data[cells]
+            v=cur_step.grid.rfield_fy0.data[cells]
+            w=cur_step.grid.rfield_fz0.data[cells]
+            
+            r= np.sqrt( np.power(x,2)+np.power(y,2)+np.power(z,2)) / cur_step.fof.R200[halo_num]
+        
+            flux_m=(x*u+y*v+z*w)/r 
+            flux_m *= (4*np.pi*np.power(r,2))
+            
+            nbins=5
+            bins=np.linspace(0,1,nbins+1)
+            _x=(bins[1:]+bins[:-1])/2
+
+            flux_n1,_=np.histogram(r,bins=bins)
+            flux_h11,_=np.histogram(r,bins=bins,weights=flux_m)
+            
+    #             flux_h11 *= 4**(istep)
+            
+#_________________________________________________________________________________________________
+
+            stars=cur_step.fof.stars[halo_num]
+
+            x=cur_step.star.x.data[stars]-xc
+            y=cur_step.star.y.data[stars]-yc
+            z=cur_step.star.z.data[stars]-zc
+            r= np.sqrt( np.power(x,2)+np.power(y,2)+np.power(z,2)) / cur_step.fof.R200[halo_num]
+
+            star_m= cur_step.star.flux_UV[stars]          
+
+            star_n1,_=np.histogram(r,bins=bins)
+            star_h11,_=np.histogram(r,bins=bins,weights=star_m)
+
+            star_h11=np.cumsum(star_h11)
+
+#_________________________________________________________________________________________________
+            
+            flux_m_bin.append(flux_h11)
+            star_m_bin.append(star_h11)
+            
+#             if not np.any(np.isnan(star_h11)):
+            fesc_m_bin.append(np.divide(flux_h11,star_h11))
+
+#             plt.plot(_x,np.divide(flux_h11,star_h11), 'o', c=color[i], ls=ls[i])
+# _________________________________________________________________________________________________
+#         y=np.mean(flux_m_bin, axis=0)/np.mean(star_m_bin, axis=0)
+#         y=np.mean( np.divide(flux_m_bin,star_m_bin), axis=0)
+#         y=np.nanmean(fesc_m_bin, axis=0)        
+#         plt.ylabel("R200 flux over Stellar flux [unknow unit]")
+# _________________________________________________________________________________________________
+        y=np.nanmean(flux_m_bin, axis=0)
+        plt.ylabel("R200 flux [unknow unit]")
+
+# _________________________________________________________________________________________________
+#         y=np.nanmean(star_m_bin, axis=0)
+#         plt.ylabel("Stellar flux [phot/s]")
+# _________________________________________________________________________________________________        
+        ls=["-",":"]
+        print("%s -> %.1e <Mh< %.1e"%(ls[i], Mbins[i],Mbins[i+1]))
+        print("%s -> %s"%(color[istep], labels[istep]))
+        plt.plot(_x,y, 'o', ls=ls[i],  label=lab, c=color[istep])
+
+
+plt.yscale("log")
+plt.xlabel("r/R200")
+plt.xlim(0,1)
+# plt.ylim(1e-57,1e-51
 

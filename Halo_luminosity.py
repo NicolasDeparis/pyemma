@@ -954,7 +954,7 @@ plt.ylabel("Reionisation redshift")
 
 # # LUMINOSITY FUNCTION
 
-# In[52]:
+# In[2]:
 
 flux = run1.step_00015.star.flux
 
@@ -2405,7 +2405,7 @@ plt.yscale('log')
 
 # # SFR FUNCTION OF HALO MASS
 
-# In[33]:
+# In[1]:
 
 level=8
 nptot=2**(3*level)

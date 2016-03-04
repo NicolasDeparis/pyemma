@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[233]:
+# In[5]:
 
 get_ipython().magic('matplotlib notebook')
 import matplotlib.pyplot as plt
@@ -24,7 +24,7 @@ get_ipython().magic('autoreload 2')
 get_ipython().magic('connect_info')
 
 
-# In[234]:
+# In[6]:
 
 runset=db.Runset()
 runset.load()
@@ -32,7 +32,7 @@ runset.get_description()
 runset.get_folder()
 
 
-# In[235]:
+# In[7]:
 
 run1=io.Run(runset.runs[10].folder)
 
@@ -71,15 +71,15 @@ cat1=fof.Fof(run1.folder+"data/",17)
 cat2=fof.Fof(run2.folder+"data/",12)
 
 
-# In[244]:
+# In[8]:
 
-# cur_run=run1
-# cur_step = run1.step_00017
-# cur_cat=cur_step.fof
+cur_run=run1
+cur_step = run1.step_00017
+cur_cat=cur_step.fof
 
-cur_run=run2
-cur_cat=cat2
-cur_step = run2.step_00012
+# cur_run=run2
+# cur_cat=cat2
+# cur_step = run2.step_00012
 
 
 # In[7]:
@@ -163,15 +163,15 @@ x_healpix,y_healpix,z_healpix=hp.pix2vec(nside, range(hp.nside2npix(nside) ))
 -
 
 
-# In[252]:
+# In[95]:
 
 f, (ax1, ax2) = plt.subplots(2, sharex=True, figsize=(10,10))
 
-mean_scal=mean_scal_ref
+mean_scal=cur_cat.mean_flux_rad_1_00
 
 cur_cat.get_part_mass_fine()
 x= cur_cat.part_mass_fine
-y= mean_scal
+y= cur_cat.mean_flux_rad_1_00
 
 mask=mean_scal>0
 ax1.plot(x[mask], y[mask],'.',c="#99ccff", label="%d positives values"%len( y[mask]))
@@ -899,32 +899,43 @@ plt.ylabel("rad flux")
 
 # # RAD FLUX FUNCTION OF MEAN IONISATION
 
-# In[268]:
+# In[92]:
 
-cur_step.grid.
+# cur_step.fof.get_cells_fine(cur_step.grid)
+# cur_step.fof.get_flux_r200(cur_step.grid, "rad", force=0)
 
-cur_step.fof.get_cells(cur_step.grid)
-cur_step.fof.get_flux_r200(cur_step.grid, "rad")
+mask = cur_step.fof.mean_flux_rad_1_00>0
 
 x=np.zeros(cur_step.fof.nfoftot)
 for halo_num in range(cur_step.fof.nfoftot):
     x[halo_num] =1.-np.mean(cur_step.grid.xion.data[cur_step.fof.cells_fine[halo_num]])
 
-y=cur_step.fof.mean_flux_rad
+y=cur_step.fof.mean_flux_rad_1_00
+
+x=x[mask]
+y=y[mask]
+
+nbins=128
+xbins=np.logspace(np.log10(np.min(x)),np.log10(np.max(x)), nbins)
+ybins=np.logspace(np.log10(np.min(y)),np.log10(np.max(y)), nbins)
+
+h,_,_=np.histogram2d(y,x,bins=(ybins,xbins))
 
 
 plt.figure()
-plt.plot(x,y,'.')
+extent = (np.min(x),np.max(x),np.min(y),np.max(y))
+# extent = (0.,1.,0.,1.)
+plt.imshow(np.log10(h),interpolation="nearest", origin='lower', extent=extent, aspect='auto')
+
 plt.xscale('log')
 plt.yscale('log')
-
 plt.xlabel('Neutral fraction')
 plt.ylabel('Radiative outflow')
 
 
 # # Out flow function of halo mass
 
-# In[262]:
+# In[90]:
 
 cur_step.star.age.read(force=1)
 cur_step.star.mass.read(force=1)

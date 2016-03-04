@@ -119,14 +119,14 @@ def sumMag(mass, age, modelmag, modelage):
 
 # In[14]:
 
-def get_all_flux_1600(stars,current_time,a,unit_mass):
+def get_all_flux_1600(stars,current_time,unit_mass):
     """
-    get luminous flux of stars
+    get luminous flux of stars in M1600 band
     """
     
     modelmag, modelage = getModel()
     age = current_time - stars.age.data
-    mass = stars.mass.data/1.9891e30*unit_mass/1e6
+    mass = stars.mass.data*unit_mass/1.9891e30/1e6
     mags=np.interp(age,modelage,modelmag)
     flux = mass * mag2flux(mags)
     
@@ -135,17 +135,17 @@ def get_all_flux_1600(stars,current_time,a,unit_mass):
 
 # In[6]:
 
-def get_all_flux_UV(stars,current_time,a,unit_mass):
+def get_all_flux_UV(stars,current_time,unit_mass):
     """
-    get luminous flux of stars
+    get luminous flux of stars in UV
     """
     
     def getflux_UV(age):
         tlife = 3.673e6 #yr
-        E0 = 3.399e16 *(365*24*3600) #phot/s/kg
-        y=np.ones(len(age)) *E0    
-        y[age>tlife] *= np.power(age[age>tlife]/tlife ,-4.)        
-        return y 
+        E0 = 3.399e16 #phot/s/kg
+        y=np.ones(len(age)) *E0
+        y[age>tlife] *= np.power(age[age>tlife]/tlife ,-4.)
+        return y
         
     mass = stars.mass.data*unit_mass # kg
     flux = getflux_UV(current_time - stars.age.data) # #phot/s/kg

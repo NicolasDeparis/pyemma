@@ -9,7 +9,7 @@ import os
 from scipy import spatial
 
 
-# In[145]:
+# In[3]:
 
 class Fof:
     def __init__(self,folder,stepnum):
@@ -329,7 +329,7 @@ class Fof:
         x=part.x.data
         y=part.y.data
         z=part.z.data
-        print()
+        
         tree = spatial.cKDTree( np.transpose( [x,y,z] )) 
 
         n=self.nfoftot
@@ -567,14 +567,13 @@ class Fof:
             d=grid.field_d.data[cells]
             self.gas_mass_fine[halo_num] = np.sum( d* np.power(0.5,3*l) )
 
-        self.gas_mass_fine = self.gas_mass_fine/1.9891e30*info.unit_mass        
+        self.gas_mass_fine = self.gas_mass_fine/1.9891e30*info.unit_mass                
         
 ####################################################################################################################
 # Luminosity
 ####################################################################################################################
         
     def get_integ_egy(self,age,mass,tlife,force=0):
-
         import luminosity
         name = self.path+"int_egy"
         if os.path.isfile(name) and not force:
@@ -590,30 +589,15 @@ class Fof:
 
         with open(name, 'wb') as output:
             pickle.dump(self.integ_egy, output,-1)
-            
                             
     def get_luminosity_1600(self,cur_step):
-        import luminosity
-        from pyemma import io
-        def a2t_quad(az):
-            from scipy import integrate
-
-            o_m=self.om
-            o_v=1.-o_m
-
-            H0=67
-            H0 = H0*1e3/1e6/3.08567758e16*(365*24*3600) # Hubble constant in SI unit
-
-            def f(a):
-                return a/ np.sqrt(o_m*a + o_v*a**4 )
-
-            return 1./H0 * integrate.quad(f,0,az)[0]
-
+        from pyemma import io,time,luminosity
+        
         info = io.Info(self.path+"../../../")
 
-        t=a2t_quad(cur_step.a)
+        t=time.a2t_quad(cur_step.a, info.om, info.H0)
         
-        luminosity.get_all_flux_1600(cur_step.star,t,cur_step.a,info.unit_mass)
+        luminosity.get_all_flux_1600(cur_step.star,t,info.unit_mass)
 
         flux = cur_step.star.flux_1600
         
@@ -621,31 +605,15 @@ class Fof:
         for i in range(self.nfoftot):
             flux_tot[i]=np.sum(flux[self.stars[i]])
         self.star_flux_1600=flux_tot
-        self.mag=luminosity.flux2mag(flux_tot[flux_tot!=0])
+        self.mag_1600=luminosity.flux2mag(flux_tot[flux_tot!=0])
         
     def get_luminosity_UV(self,cur_step):
-
-        import luminosity
-        from pyemma import io
-        def a2t_quad(az):
-            from scipy import integrate
-
-            o_m=self.om
-            o_v=1.-o_m
-
-            H0=67
-            H0 = H0*1e3/1e6/3.08567758e16*(365*24*3600) # Hubble constant in SI unit
-
-            def f(a):
-                return a/ np.sqrt(o_m*a + o_v*a**4 )
-
-            return 1./H0 * integrate.quad(f,0,az)[0]
-
+        from pyemma import io, time,luminosity
         info = io.Info(self.path+"../../../")
                     
-        t=a2t_quad(cur_step.a)
+        t=time.a2t_quad(cur_step.a, info.om, info.H0)
         
-        luminosity.get_all_flux_UV(cur_step.star,t,cur_step.a,info.unit_mass)
+        luminosity.get_all_flux_UV(cur_step.star,t,info.unit_mass)
 
         flux = cur_step.star.flux_UV
         
@@ -653,9 +621,7 @@ class Fof:
         for i in range(self.nfoftot):
             flux_tot[i]=np.sum(flux[self.stars[i]])
         self.star_flux_UV=flux_tot
-        
-        
-        
+        self.mag_UV=luminosity.flux2mag(flux_tot[flux_tot!=0])
 
 ####################################################################################################################
 ####################################################################################################################
@@ -667,6 +633,7 @@ class Fof:
         
         name = self.path+"mean_vel"
         if os.path.isfile(name) and not force:
+            print("Reading %s"%name)
             with open(name, 'rb') as input:
                 self.mean_vel = pickle.load(input)
             return
@@ -693,6 +660,7 @@ class Fof:
                 
         name = self.path+"inertia"
         if os.path.isfile(name) and not force:
+            print("Reading %s"%name)
             with open(name, 'rb') as input:
                 self.inertia_eig_val = pickle.load(input)
                 self.inertia_eig_vec = pickle.load(input)
@@ -808,16 +776,13 @@ class Fof:
         #get_cells
         """
 
-        from pyemma import io
-        info = io.Info(self.path+"../../../")                
-        a=0.15
-        rad_scale=1./a**4 *info.unit_l/info.unit_t
-        
         name = self.path+"flux_r200_%s"%type
+        fact_name = ("%0.2f"%(fact)).replace(".","_")  
         if os.path.isfile(name) and not force:
-            with open(name, 'rb') as input:
-                setattr(self,"flux_data_%s"%type,pickle.load(input))
-                setattr(self,"mean_flux_%s"%type,pickle.load(input))
+            print("Reading %s"%name)
+            with open(name, 'rb') as input:                      
+                setattr(self,"flux_data_%s_%s"%(type,fact_name),pickle.load(input))
+                setattr(self,"mean_flux_%s_%s"%(type,fact_name),pickle.load(input))
             return                
         
         #healpix shere
@@ -839,7 +804,7 @@ class Fof:
             yc =self.y[halo_num]
             zc =self.z[halo_num]
             R200=self.R200[halo_num]
-            cells = self.cells[halo_num]            
+            cells = self.cells[halo_num]
 
             # skip halo smaller than ncells_min
             ncells_min = 2
@@ -855,15 +820,12 @@ class Fof:
             x_grid = (grid.x.data[cells] +dx/2. -xc)
             y_grid = (grid.y.data[cells] +dx/2. -yc)
             z_grid = (grid.z.data[cells] +dx/2. -zc)
-            
-            #scaling healpix
-            x_healpix_scaled=x_healpix*fact*R200
-            y_healpix_scaled=y_healpix*fact*R200
-            z_healpix_scaled=z_healpix*fact*R200
 
-            #get the cell nearst neighbourg of each healpix point
+            #gen tree
             tree = spatial.cKDTree(np.transpose((x_grid,y_grid,z_grid)))
-            idx = tree.query(np.transpose((x_healpix_scaled,y_healpix_scaled,z_healpix_scaled)))[1]
+            
+            #get the cell nearest neighbourg of each healpix point
+            idx = tree.query(np.transpose((x_healpix*fact*R200,y_healpix*fact*R200,z_healpix*fact*R200)))[1]
         
             # Select the flux
             if type == "hydro":
@@ -873,38 +835,65 @@ class Fof:
                 fz=grid.field_d.data[cells]*(grid.field_w.data[cells]-self.mean_vel[halo_num][2])
             
             if type == "rad":
-                
                 # radiative flux
-                fx=grid.rfield_fx0.data[cells]*rad_scale
-                fy=grid.rfield_fy0.data[cells]*rad_scale
-                fz=grid.rfield_fz0.data[cells]*rad_scale  
+                fx=grid.rfield_fx0.data[cells]
+                fy=grid.rfield_fy0.data[cells]
+                fz=grid.rfield_fz0.data[cells]
 
-#             if type == "ref":
-#                 #reference flux
-#                 fx=-np.ones(len(cells))
-#                 fy=-np.ones(len(cells))
-#                 fz=-np.ones(len(cells))
+            if type == "ref":
+                #reference flux
+                fx=-np.ones(len(cells))
+                fy=-np.ones(len(cells))
+                fz=-np.ones(len(cells))
                 
             # scalar product
-            flux_data[halo_num]=(x_healpix_scaled*fx[idx] +
-                                 y_healpix_scaled*fy[idx] +
-                                 z_healpix_scaled*fz[idx] )    *4*np.pi*R200**2
+            flux_data[halo_num]=(x_healpix*fx[idx] +
+                                 y_healpix*fy[idx] +
+                                 z_healpix*fz[idx] )    *4*np.pi*(fact*R200)**2
             # mean flux
             mean_flux[halo_num]=np.mean(flux_data[halo_num])
-            
-            
 
         # mean_scal_rad[abs(mean_scal_rad) < abs(mean_scal_ref) ]=0
         
         print("skipped %d/%d = %.02f %%"%(skipped,self.nfoftot, skipped/self.nfoftot*100))
-        
-                
-        setattr(self,"flux_data_%s"%type,flux_data)
-        setattr(self,"mean_flux_%s"%type,mean_flux)
+                                
+        setattr(self,"flux_data_%s_%s"%(type,fact_name),flux_data)
+        setattr(self,"mean_flux_%s_%s"%(type,fact_name),mean_flux)
         
         with open(name, 'wb') as output:
             pickle.dump(flux_data, output,-1)
             pickle.dump(mean_flux, output,-1)
         
         print("get_flux_r200 done")
+        
+####################################################################################################################
+####################################################################################################################
+    def get_instant_SFR(self,stars):
+        from pyemma import io, time
+        info = io.Info(self.path+"../../../")
+        
+        t=time.a2t_quad(stars.age.tsim, info.om, info.H0)
+        
+        self.instant_sfr=np.zeros(self.nfoftot)
+        for halo_num in range(self.nfoftot):
+            star_mask=self.stars[halo_num]
+            age=t-stars.age.data[star_mask]
+            thresh=1e7
+            self.instant_sfr[halo_num]=np.sum( (stars.mass.data[star_mask])[age<thresh] )
+            self.instant_sfr[halo_num]*=info.unit_mass/1.9891e30
+            self.instant_sfr[halo_num]/=thresh
+            
+    def get_time_newest_star(self, stars):
+        self.time_newest_star=np.zeros(self.nfoftot)        
+        for halo_num in range(self.nfoftot):
+            star_mask=self.stars[halo_num]
+            if len(star_mask):
+                self.time_newest_star[halo_num] = np.max(stars.age.data[star_mask])                
+                
+    def get_time_oldest_star(self, stars):
+        self.time_oldest_star=np.zeros(self.nfoftot)
+        for halo_num in range(self.nfoftot):
+            star_mask=self.stars[halo_num]
+            if len(star_mask):
+                self.time_oldest_star[halo_num] = np.min(stars.age.data[star_mask])
 

@@ -126,7 +126,7 @@ def sfr2():
     y= np.power(10., z[:,2])
 
     low_err = np.abs(y - np.power(10., z[:,2] + z[:,4]))
-    sup_err = np.abs(y - np.power(10., z[:,2] + z[:,3]))	
+    sup_err = np.abs(y - np.power(10., z[:,2] + z[:,3]))
     yerror = [low_err, sup_err]
 
     return x, y, xerror, yerror
