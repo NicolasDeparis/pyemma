@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[381]:
 
 get_ipython().magic('matplotlib notebook')
 import matplotlib.pyplot as plt
@@ -40,26 +40,32 @@ run3=io.Run(runset.runs[1].folder)
 run4=io.Run("/home/deparis/curie_data/data/oct_src/")
 
 
-# In[109]:
+# In[388]:
+
+testmpi=io.Run("/data/deparis/8_8_gather_6/")
+
+
+# In[393]:
 
 # cur_step =run1.step_00017
 # cur_step =run2.step_00021
-cur_step =run3.step_00018
+# cur_step =run3.step_00018
+cur_step =testmpi.step_00018
 
 
-# In[110]:
+# In[394]:
 
 x=cur_step.grid.x.data
 y=cur_step.grid.y.data
 z=cur_step.grid.z.data
 l=cur_step.grid.l.data
-d=cur_step.grid.rfield_src.data
+d=cur_step.grid.field_d.data
 
 projection_level=11
 map1=grid.get_cube(x,y,z,l,d,projection_level,"2d")
 
 
-# In[111]:
+# In[395]:
 
 plt.figure(figsize=(13,10))
 plt.imshow(np.log10(map1),interpolation="nearest",origin="lower")

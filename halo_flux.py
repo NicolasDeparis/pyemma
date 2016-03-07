@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[5]:
+# In[96]:
 
 get_ipython().magic('matplotlib notebook')
 import matplotlib.pyplot as plt
@@ -35,6 +35,16 @@ runset.get_folder()
 # In[7]:
 
 run1=io.Run(runset.runs[10].folder)
+
+
+# In[97]:
+
+run_test =io.Run("/data/deparis/8_8_gather_6/")
+
+
+# In[99]:
+
+run_test.step_00018.grid.x.data
 
 
 # In[236]:
