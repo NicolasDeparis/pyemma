@@ -1,14 +1,14 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 import os
 import numpy as np
 import h5py
 
 
-# In[16]:
+# In[ ]:
 
 def getnproc(path):
     """
@@ -21,7 +21,7 @@ def getnproc(path):
     return nproc
 
 
-# In[2]:
+# In[ ]:
 
 class Run:
     """
@@ -49,17 +49,17 @@ class Run:
         self.param=Param(self.folder)
 
 
-# In[4]:
+# In[ ]:
 
 class Step:
-    def __init__(self,number,folder ):
+    def __init__(self,number,folder):
         """
         Step object
         """
 
         self.number=number
         self.folder=folder
-        self.a=0.15
+        
 
         self.part=Fields(number,folder,0)
         self.star=Fields(number,folder,1)
@@ -70,6 +70,11 @@ class Step:
 
         import fof     
         self.fof=fof.Fof(folder,number)
+        
+    def get_a(self):
+        
+        self.a=a
+        
 
 
 # In[ ]:
@@ -81,7 +86,7 @@ class Fields:
         """
 
         self._number=number
-        self._sets_type = sets_type
+        self._sets_type = sets_type        
 
         if sets_type==0:
             self._type="part_"
@@ -94,19 +99,36 @@ class Fields:
         for cur_folder in  os.listdir(path):
             if  os.path.isdir("%s%s"%(path,cur_folder)):
                 continue
+            if not "h5" in cur_folder:
+                print("skipping",cur_folder)
+                continue
+                
             if self._type in cur_folder:
                 key=cur_folder[5:].replace(".","_").replace("[","").replace("]","")
-                key=key[:-9]                
-                val= Field(folder,number,cur_folder[:-9])
+                key=key[:-9]
+#                 print(key)
+                val= Field(folder,number,cur_folder[:-9])                
                 setattr(self,key,val)
-    
+        
+        self.get_a()
+        
     def read(self,force=0):
         """
         read all field in fields.        
         """        
-        for i in self.__dict__ :            
-            if self.__dict__[i].__class__.__name__ == "Field":                
+        for i in self.__dict__ :
+            if self.__dict__[i].__class__.__name__ == "Field":
                 self.__dict__[i].read(force)
+                
+    def get_a(self,force=0):
+        """
+        get the scale factor.
+        """        
+        for i in self.__dict__ :
+            if self.__dict__[i].__class__.__name__ == "Field":
+                self.a=self.__dict__[i].get_a()                
+                return
+        
 
 
 # In[ ]:
@@ -115,13 +137,14 @@ class Field():
     """
     Field object
     """
-    def __init__(self,runpath,stepnum,field):
+    def __init__(self,runpath,stepnum,field):        
         self._runpath=runpath     
         self._stepnum=stepnum
         self._field=field
 
         self._field_folder="%s%05d/"%(runpath,stepnum)
         cur_field = field[5:]
+        
         self._filename="%s%s_%05d.h5"%(self._field_folder,field,stepnum)
         self._isloadded=False
         
@@ -138,16 +161,25 @@ class Field():
             print("reading %s"%self._field)
             
             f = h5py.File(self._filename, "r")
+            self.a=f.attrs['a']
             self.data=f['data'][:]
+            f.close()
             
             self._isloadded=True
         else:
             print("%s allready loaded, use force=1 to reload"%self._field)
+            
+    def get_a(self):
+        """
+        read the scale factor
+        """
+        f = h5py.File(self._filename, "r")
+        return f.attrs['a']
 
 
 # # Parameter files
 
-# In[12]:
+# In[ ]:
 
 class Info:
     """
@@ -167,7 +199,7 @@ class Info:
                     setattr(self,key,val)
 
 
-# In[11]:
+# In[ ]:
 
 class RunParam:
     """
@@ -186,7 +218,7 @@ class RunParam:
                     setattr(self,key,val)
 
 
-# In[5]:
+# In[ ]:
 
 class FieldAvg:
     """
@@ -203,7 +235,7 @@ class FieldAvg:
         setattr(self,"max",data[4])
 
 
-# In[1]:
+# In[ ]:
 
 class Avg:
     """
@@ -233,7 +265,7 @@ class Avg:
                     pass
 
 
-# In[7]:
+# In[ ]:
 
 class Param:
     def __init__(self,folder):
