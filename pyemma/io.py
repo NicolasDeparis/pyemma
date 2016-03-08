@@ -10,19 +10,6 @@ import h5py
 
 # In[ ]:
 
-def getnproc(path):
-    """
-    count the number of files in path
-    """
-    try:        
-        nproc = len(os.listdir(path))
-    except FileNotFoundError:
-        print("ERROR : can't determine nproc in \n%s"%path)    
-    return nproc
-
-
-# In[ ]:
-
 class Run:
     """
     Run object 
@@ -71,9 +58,10 @@ class Step:
         import fof     
         self.fof=fof.Fof(folder,number)
         
-    def get_a(self):
-        
-        self.a=a
+    
+        self.part.get_a()
+        self.a=self.part.a
+            
         
 
 
@@ -97,29 +85,20 @@ class Fields:
 
         path = "%s%05d/"%(folder,number)
         for cur_folder in  os.listdir(path):
+            
             if  os.path.isdir("%s%s"%(path,cur_folder)):
                 continue
             if not "h5" in cur_folder:
-                print("skipping",cur_folder)
                 continue
                 
             if self._type in cur_folder:
                 key=cur_folder[5:].replace(".","_").replace("[","").replace("]","")
                 key=key[:-9]
-#                 print(key)
                 val= Field(folder,number,cur_folder[:-9])                
                 setattr(self,key,val)
         
         self.get_a()
-        
-    def read(self,force=0):
-        """
-        read all field in fields.        
-        """        
-        for i in self.__dict__ :
-            if self.__dict__[i].__class__.__name__ == "Field":
-                self.__dict__[i].read(force)
-                
+                        
     def get_a(self,force=0):
         """
         get the scale factor.
