@@ -47,7 +47,6 @@ class Step:
         self.number=number
         self.folder=folder
         
-
         self.part=Fields(number,folder,0)
         self.star=Fields(number,folder,1)
         self.grid=Fields(number,folder,2)
@@ -58,11 +57,8 @@ class Step:
         import fof     
         self.fof=fof.Fof(folder,number)
         
-    
-        self.part.get_a()
-        self.a=self.part.a
-            
-        
+        self.part._get_a()
+        self.a=self.part._a
 
 
 # In[ ]:
@@ -97,15 +93,15 @@ class Fields:
                 val= Field(folder,number,cur_folder[:-9])                
                 setattr(self,key,val)
         
-        self.get_a()
+        self._get_a()
                         
-    def get_a(self,force=0):
+    def _get_a(self,force=0):
         """
         get the scale factor.
         """        
         for i in self.__dict__ :
             if self.__dict__[i].__class__.__name__ == "Field":
-                self.a=self.__dict__[i].get_a()                
+                self._a=self.__dict__[i]._get_a()                
                 return
         
 
@@ -122,7 +118,6 @@ class Field():
         self._field=field
 
         self._field_folder="%s%05d/"%(runpath,stepnum)
-        cur_field = field[5:]
         
         self._filename="%s%s_%05d.h5"%(self._field_folder,field,stepnum)
         self._isloadded=False
@@ -135,7 +130,10 @@ class Field():
             raise AttributeError
 
     def read(self, xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1, force=0):
-
+        """
+        The main reader function
+        """
+        
         if not self._isloadded or force :
             print("reading %s"%self._field)
             
@@ -148,7 +146,7 @@ class Field():
         else:
             print("%s allready loaded, use force=1 to reload"%self._field)
             
-    def get_a(self):
+    def _get_a(self):
         """
         read the scale factor
         """
