@@ -1,21 +1,15 @@
-
 # coding: utf-8
-
-# In[2]:
 
 import  numpy as np
 import matplotlib.pyplot as plt
-
-
-# In[3]:
 
 def sfr1():
     """
     data from Bouwens et al. 2015 http://arxiv.org/pdf/1403.4295v4.pdf
 
-    format: 
+    format:
         z, log10(sfr)_dust_uncorrected, error_inf, error_sup, log10(sfr)_dust_corrected, error_inf, error_sup
-    """	
+    """
     z=np.array([
     [3.8,	-1.38, 	0.06, 0.06,	-1.00, 	0.06,	0.06],
     [4.9,  	-1.60,	0.06, 0.06,	-1.26, 	0.06,	0.06],
@@ -39,8 +33,8 @@ def sfr1():
     sup_err2 = np.abs(y2 - np.power(10., z[:,1] + z[:,5]))
     yerror2 = [low_err2, sup_err2]
 
-    #plt.errorbar(x, y, yerr=yerror, ls='none', fmt='b*',label = "Bouwens et al. 2015")	
-    #plt.errorbar(x,y, yerr=yerror, ls='none', fmt='b*')	
+    #plt.errorbar(x, y, yerr=yerror, ls='none', fmt='b*',label = "Bouwens et al. 2015")
+    #plt.errorbar(x,y, yerr=yerror, ls='none', fmt='b*')
 
     x = np.append(x,x)
     y = np.append(y1,y2)
@@ -54,15 +48,12 @@ def sfr1():
 
     return x, y, None, yerror
 
-
-# In[4]:
-
 def sfr2():
     """
     Observational constraints for SFR.
     data from  Madau, P., & Dickinson, M. 2014, ARA&A, 52, 415 (MD 14)
 
-    format: 
+    format:
         zmin, zmax, log10(sfr), error_inf, error_sup
     """
     z=np.array([
@@ -133,9 +124,6 @@ def sfr2():
 
     #plt.errorbar(x, y, xerr=xerror, yerr=yerror, ls='none', fmt='b8', label = "Madau et al. 2014")
 
-
-# In[ ]:
-
 def sfr():
     x1, y1, xerror1, yerror1 = sfr1()
     x2, y2, xerror2, yerror2 = sfr2()
@@ -148,13 +136,10 @@ def sfr():
         plt.errorbar(x1, y1, xerr=xerror1, yerr=yerror1, ls='none', fmt='k.', label = "Observations")
         plt.errorbar(x2, y2, xerr=xerror2, yerr=yerror2, ls='none', fmt='k.')
 
-
-# In[ ]:
-
 def roberson_2015_fit():
     """ from : Cosmic Reionization and Early Star-forming Galaxies: A Joint Analysis of New Constraints from Planck and the Hubble Space Telescope"""
     z=np.linspace(0,20,1000)
-    
+
     """Plank case"""
     a=0.01376
     b=3.26
@@ -162,7 +147,7 @@ def roberson_2015_fit():
     d=5.68
     y_fit= a*np.power(1+z, b)/(1+np.power((1+z)/c,d))
     plt.plot(z,y_fit)
-    
+
     """WMAP case"""
     a=0.01306
     b=3.66
@@ -171,22 +156,19 @@ def roberson_2015_fit():
     y_fit= a*np.power(1+z, b)/(1+np.power((1+z)/c,d))
     #plt.plot(z,y_fit)
 
-
-# In[ ]:
-
 def roberson_2010_fit():
     """from : Early star-forming galaxies and the reionization of the Universe"""
     z=np.linspace(0,20,100)
-    
+
     a = 0.009
     b = 0.27
     h = 2.5
-    
+
     """metal poor case"""
     c = 3.7
     d = 7.4
     g = 1e-3
-    y_fit  = (a + b*(z/c)**h ) /(1. + (z/c)**d ) + g    
+    y_fit  = (a + b*(z/c)**h ) /(1. + (z/c)**d ) + g
     plt.plot(z,y_fit)
 
     """metal rich case"""
@@ -195,9 +177,6 @@ def roberson_2010_fit():
     g = 1e-4
     y_fit  = (a + b*(z/c)**h ) /(1. + (z/c)**d ) + g
     plt.plot(z,y_fit)
-
-
-# In[ ]:
 
 def xion():
     """
@@ -227,7 +206,7 @@ def xion():
     yerror = [-z[:,3], z[:,2]]
 
 
-    plt.errorbar(x, 1.-y, xerr=None, yerr=yerror, ls='none', fmt='ko', label="Observations")		
+    plt.errorbar(x, 1.-y, xerr=None, yerr=yerror, ls='none', fmt='ko', label="Observations")
 
 
     """
@@ -282,13 +261,10 @@ for curz in z:
         Q[i]=1+ (1+curz)**3
     else:
         Q[i]=np.exp(-l*(1+curz))*30
-        
+
     i+=1
 plt.plot(z,Q)
 """
-
-
-# In[6]:
 
 def luminosity_function(redshift):
     """
@@ -310,7 +286,7 @@ def luminosity_function(redshift):
         LF=[0.000002,0.000015,0.000053,0.000176,0.000320,0.000698,0.001246,0.001900,0.006680,0.013640]
         error=[0.000002,0.000006,0.000012,0.000025,0.000041,0.000083,0.000137,0.000320,0.001380,0.004200]
 
-    if redshift == 7:	
+    if redshift == 7:
         mag=[-22.16,-21.66,-21.16,-20.66,-20.16,-19.66,-19.16,-18.66,-17.91,-16.91]
         LF=[0.000001,0.000033,0.000048,0.000193,0.000309,0.000654,0.000907,0.001717,0.005840,0.008500]
         error=[0.000002,0.000009,0.000015,0.000034,0.000061,0.000100,0.000177,0.000478,0.001460,0.002940]
@@ -327,9 +303,6 @@ def luminosity_function(redshift):
 
     return mag,LF,error
 
-
-# In[5]:
-
 def luminosity_function_fit(redshift):
     """
     observation LF in UV for Bouwens et al 2014
@@ -340,7 +313,7 @@ def luminosity_function_fit(redshift):
     if redshift== 5:
         ms=-21.17
         ps=0.74e-3
-        a=-1.76	
+        a=-1.76
         LFB=ps*np.log(10)/2.5*10.**(-0.4*(MB-ms)*(a+1))*np.exp(-10**(-0.4*(MB-ms)))
 
     if redshift== 6:
@@ -356,17 +329,13 @@ def luminosity_function_fit(redshift):
         LFB=ps*np.log(10)/2.5*10.**(-0.4*(MB-ms)*(a+1))*np.exp(-10**(-0.4*(MB-ms)))
     return MB, LFB
 
-
-# In[ ]:
-
 def baryonic_fraction(info):
     """
     from Okamoto 2008 : http://mnras.oxfordjournals.org/content/390/3/920.full.pdf
     """
-    
-    fb = info.ob/info.om
-    
-    alpha = 2
-    
-    res= (1+ (2**(alpha/3)-1) * (M/Mc)**(-alpha)  )**(-3/alpha)
 
+    fb = info.ob/info.om
+
+    alpha = 2
+
+    res= (1+ (2**(alpha/3)-1) * (M/Mc)**(-alpha)  )**(-3/alpha)

@@ -1,13 +1,7 @@
-
 # coding: utf-8
-
-# In[1]:
 
 import os
 import numpy as np
-
-
-# In[2]:
 
 def getnproc(path):
     try:
@@ -17,18 +11,15 @@ def getnproc(path):
         nproc=0
     return nproc
 
-
-# In[2]:
-
 class Hop:
     def __init__(self,stepnum,folder):
-        
+
         self.exec_folder  = "utils/hop/"
 
         self.number=stepnum
 #         self.folder="%s/%05d"%(folder,stepnum)
         self.folder=folder
-        
+
         self.name="hop.%05d"%stepnum
         self.path=("%s%s"%(folder,self.name))
 
@@ -50,7 +41,7 @@ class Hop:
         print ("Reading file", self.den_name)
         with open(self.den_name, "rb") as file:
             self.N = np.fromfile(file, dtype=np.int32   ,count=1)[0]
-            self.den = np.fromfile(file, dtype=np.float32 ,count=self.N)            
+            self.den = np.fromfile(file, dtype=np.float32 ,count=self.N)
             print ("Read OK")
 
     def getDen(self,force=0):
@@ -73,7 +64,7 @@ class Hop:
             dummy = np.fromfile(file, dtype=np.int32   ,count=1)
             dummy = np.fromfile(file, dtype=np.int32   ,count=1)
             self.tag = np.fromfile(file, dtype=np.int32   ,count=self.npart)
-            dummy = np.fromfile(file, dtype=np.int32   ,count=1)        
+            dummy = np.fromfile(file, dtype=np.int32   ,count=1)
             print ("Read OK")
 
     def readNGRP(self):
@@ -94,4 +85,3 @@ class Hop:
     def get(self,force=0):
         self.getDen(force)
         self.getTag(force)
-

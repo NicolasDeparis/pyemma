@@ -1,28 +1,16 @@
-
 # coding: utf-8
-
-# In[ ]:
 
 import os, sys
 import numpy as np
 from scipy import integrate
 
-
-# In[5]:
-
 def mag2flux(mag):
     flux = np.power(10,-mag/2.5)
     return flux
 
-
-# In[ ]:
-
 def flux2mag(flux):
     mag = -2.5*np.log10(flux)
     return mag
-
-
-# In[5]:
 
 def readStarburst(convert=False):
 
@@ -46,12 +34,9 @@ def readStarburst(convert=False):
 
     return age,data[0], data[1:]
 
-
-# In[10]:
-
 def getM1600(_x0, spectremodeleenergparsparAngstrom):
     """
-    Pour calculer M1600 pour un spectre modèle défini par spectremodeleenergparsparAngstrom 
+    Pour calculer M1600 pour un spectre modèle défini par spectremodeleenergparsparAngstrom
     et ses songeurs d’onde _x0:
 
     flux de ref F0: 3631 Jy
@@ -60,7 +45,6 @@ def getM1600(_x0, spectremodeleenergparsparAngstrom):
     // so for absolute mags the 0 point is Jyhzm * 4pir^2 where r = 10 pc
     AB0pointabs=3631.*Jyhzm*4.*pi*(10.*ParSec)^2; // erg/s/Hz // cause ParSec
     """
-
 
     F0 = 3631 #Jy
     Jyhzcm=1.e-23; #  erg s-1 Hz-1 cm-2
@@ -84,7 +68,7 @@ def getM1600(_x0, spectremodeleenergparsparAngstrom):
     MAB1600=-2.5*log10(integ(fi1600*spectremodeleenergparsparAngstrom,_x0)/integ(fi1600*AB0pointref,_x0));
     MAB1600;
 
-    A répéter pour tous les spectres modèle. 
+    A répéter pour tous les spectres modèle.
     """
 
     mask = np.where( (_x0>=1500) & (_x0<=1600))#le filtre vaut 1 entre 1500 et 1600 Angstrom
@@ -93,9 +77,6 @@ def getM1600(_x0, spectremodeleenergparsparAngstrom):
                                         _x0[mask]))
 
     return MAB1600
-
-
-# In[1]:
 
 def getModel():
     age, wavelength, spectre = readStarburst()
@@ -108,61 +89,48 @@ def getModel():
 
     return  modelMag, age
 
-
-# In[9]:
-
 def sumMag(mass, age, modelmag, modelage):
     mags=np.interp(age,modelage,modelmag)
     res=np.sum(mass*np.power(10,-mags/2.5))
     return -2.5*np.log10(res)
 
-
-# In[14]:
-
 def get_all_flux_1600(stars,current_time,unit_mass):
     """
     get luminous flux of stars in M1600 band
     """
-    
+
     modelmag, modelage = getModel()
     age = current_time - stars.age.data
     mass = stars.mass.data*unit_mass/1.9891e30/1e6
     mags=np.interp(age,modelage,modelmag)
     flux = mass * mag2flux(mags)
-    
+
     stars.flux_1600=flux
-
-
-# In[6]:
 
 def get_all_flux_UV(stars,current_time,unit_mass):
     """
     get luminous flux of stars in UV
     """
-    
+
     def getflux_UV(age):
         tlife = 3.673e6 #yr
         E0 = 3.399e16 #phot/s/kg
         y=np.ones(len(age)) *E0
         y[age>tlife] *= np.power(age[age>tlife]/tlife ,-4.)
         return y
-        
+
     mass = stars.mass.data*unit_mass # kg
     flux = getflux_UV(current_time - stars.age.data) # #phot/s/kg
     stars.flux_UV = mass * flux #phot/s
 
-
-# In[3]:
-
 def get_tot_egy(age, tlife):
     """
-    return the total energy emmited by a source 
+    return the total energy emmited by a source
     """
     def f(t, tlife):
         if t<=tlife :
             return 1.
         else:
             return np.power(t/tlife ,-4.)
-    
-    return integrate.quad(f,0,age, args=(tlife))[0]
 
+    return integrate.quad(f,0,age, args=(tlife))[0]
