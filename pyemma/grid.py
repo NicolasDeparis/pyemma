@@ -24,14 +24,11 @@ def get_cube(x,y,z,l,map,level,type, xmin=0.,xmax=1.,ymin=0.,ymax=1.,zmin=0.,zma
         """
         project the data of current level on a grid
         """
-        if level==lmax:
-            mask=np.where(l>=level)[0]
-            dv_lmax=0.5**(3*lmax)
-            dv_lcur=0.5**(3*l[mask])
-            w=map[mask] * dv_lcur/dv_lmax
-        else:
-            mask=np.where(l==level)[0]
-            w=map[mask]
+
+        mask=np.where(l>=level)[0]
+        dv_lmax=0.5**(3*lmax)
+        dv_lcur=0.5**(3*l[mask])
+        w=map[mask] * dv_lcur/dv_lmax
 
         if type=="2d":
             x=x[mask]
