@@ -25,20 +25,36 @@ def get_cube(x,y,z,l,map,level,type, xmin=0.,xmax=1.,ymin=0.,ymax=1.,zmin=0.,zma
         project the data of current level on a grid
         """
 
-        mask=np.where(l>=level)[0]
-        dv_lmax=0.5**(3*lmax)
-        dv_lcur=0.5**(3*l[mask])
-        w=map[mask] * dv_lcur/dv_lmax
-
         if type=="2d":
+            """
+            project a map
+            """
+            if level==lmax:
+                mask=np.where(l>=level)[0]
+                w=map[mask] * np.power(0.5,3*(l[mask]-lmax))
+            else:
+                mask=np.where(l==level)[0]
+                w=map[mask]
+
             x=x[mask]
             y=y[mask]
-            r= np.array( (x,y)) .transpose()
+            r= np.array((x,y)).transpose()
             bins_1d=np.arange(0.,1.+0.5**level,0.5**level)
             bin_edges = [bins_1d,bins_1d]
             h,_=np.histogramdd(r, weights=w,bins=bin_edges)
             return h
         elif type=="3d":
+            """
+            project a cube
+            """
+
+            if level==lmax:
+                mask=np.where(l>=level)[0]
+                w=map[mask] * np.power(0.5,3*(l[mask]-lmax)-1)
+            else:
+                mask=np.where(l==level)[0]
+                w=map[mask]
+
             x=x[mask]
             y=y[mask]
             z=z[mask]
