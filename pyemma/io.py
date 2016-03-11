@@ -42,6 +42,7 @@ class Step:
         self.star=Fields(number,folder,"star_")
         self.grid=Fields(number,folder,"grid_")
 
+#comment these line in case of probleme with halo finder
 #       self.hop=hop.Hop(number,folder)
         self.fof=fof.Fof(folder,number)
 
