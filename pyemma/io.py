@@ -60,9 +60,9 @@ class Fields:
         path = "%s%05d/"%(folder,number)
         for cur_folder in  os.listdir(path):
 
-            if  os.path.isdir("%s%s"%(path,cur_folder)):
-                continue
             if not "h5" in cur_folder:
+                continue
+            if  os.path.isdir("%s%s"%(path,cur_folder)):
                 continue
 
             if self._type in cur_folder:
@@ -174,8 +174,9 @@ class FieldAvg:
 
 class Avg:
     """
-    Reader for param.avg
+    Reader for param.avg.cpu
     """
+    # TODO add cpu/gpu switch
     def __init__(self,folder):
         filename = "%s%s"%(folder,"data/param.avg.cpu")
         with open(filename) as f:
