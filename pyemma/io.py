@@ -147,7 +147,7 @@ class RunParam:
     Reader for param.run
     """
     def __init__(self,folder):
-        filename = "%s%s"%(folder,"SRC/param.run")
+        filename = "%s%s"%(folder,"data/param.run")
         with open(filename) as f:
             for line in f:
                 if line[0]!="#":

@@ -499,14 +499,21 @@ class Fof:
 
         if type == "star_mass":
             partID = self.stars
+            part_mass=np.zeros(self.nfoftot)
+            for i in range(self.nfoftot):
+                part_mass[i]=np.sum(part.mass.data[partID[i]])
+            part_mass = part_mass/1.9891e30*info.unit_mass
+            setattr(self,type,part_mass)
         if type == "part_mass":
             partID = self.part
+            part_mass=np.zeros(self.nfoftot)
+            for i in range(self.nfoftot):
+                unit_mass=np.power(128.,-3)*(info.om)
+                part_mass[i]=unit_mass*len(partID[i])
+            part_mass = part_mass/1.9891e30*info.unit_mass
+            setattr(self,type,part_mass)
 
-        part_mass=np.zeros(self.nfoftot)
-        for i in range(self.nfoftot):
-            part_mass[i]=np.sum(part.mass.data[partID[i]])
-        part_mass = part_mass/1.9891e30*info.unit_mass
-        setattr(self,type,part_mass)
+
 
     def get_part_mass_fine(self):
         """
