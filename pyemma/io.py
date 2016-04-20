@@ -19,6 +19,8 @@ class Run:
         self._data_folder=folder+"data/"
         self.step_list=[]
 
+        self._hdf5 = True
+
         for folder in os.listdir(self._data_folder):
             try:
                 stepnum=int(folder)
@@ -58,7 +60,7 @@ class Fields:
         self._type=sets_type
 
         path = "%s%05d/"%(folder,number)
-        for cur_folder in  os.listdir(path):
+        for cur_folder in  np.sort(os.listdir(path)):
 
             if not "h5" in cur_folder:
                 continue
@@ -97,6 +99,7 @@ class Field():
         """
         if name == 'data':
             self.read()
+            # self.read_old()
             return self.__getattribute__(name)
         else:
             raise AttributeError
@@ -122,6 +125,60 @@ class Field():
         """
         f = h5py.File(self._filename, "r")
         return f.attrs['a']
+
+    def _read1proc(self,filename):
+        with open(filename, "rb") as file:
+            N = np.fromfile(file, dtype=np.int32  ,count=1)[0]
+            if N==0:
+                 return 0,0,[],[]
+            tsim = np.fromfile(file, dtype=np.float32  ,count=1)[0]
+# !!! Temporary fix !!!
+            if "grid" in filename:
+                bound= np.fromfile(file, dtype=np.float32  ,count=6)
+            elif "part" in filename:
+                bound=np.array([0,1,0,1,0,1])
+            elif "star" in filename:
+                bound=np.array([0,1,0,1,0,1])
+            else:
+                print("problem in reading field")
+# !!! end of temporary fix!!!
+
+            bx= bound[0]>self._xmax or bound[1]<self._xmin
+            by= bound[2]>self._ymax or bound[3]<self._ymin
+            bz= bound[4]>self._zmax or bound[5]<self._zmin
+
+            if bx or by or bz :
+                return 0,tsim,bound,[]
+            else:
+                data = np.fromfile(file, dtype=np.float32)
+                return N,tsim,bound,data
+
+    def _read_old(self, xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1, force=0):
+
+        if not self._isloadded or force :
+            print("reading %s"%self._field)
+            self._xmin=xmin
+            self._xmax=xmax
+            self._ymin=ymin
+            self._ymax=ymax
+            self._zmin=zmin
+            self._zmax=zmax
+
+            self._N=0
+            self.data=[]
+            self._bound=[]
+
+            for proc in range(getnproc(self._field_folder)):
+                cur_name = self._filename + ".p"+ str(proc).zfill(5)
+                N1proc,tsim,bound1proc,data1proc=self._read1proc(cur_name)
+                self._N+=N1proc
+                self._tsim=tsim
+                self._bound=np.append(self._bound,bound1proc)
+                self.data=np.append(self.data,data1proc)
+
+            self._isloadded=True
+        else:
+            print("%s allready loaded, use force=1 to reload"%self._field)
 
 # # Parameter files
 
