@@ -14,7 +14,7 @@ def get_cube(x,y,z,l,map,level,type, xmin=0.,xmax=1.,ymin=0.,ymax=1.,zmin=0.,zma
 
         n=2**dl
         if type=="2d":
-            return np.repeat(np.repeat(x,n,axis=0),n,axis=1)
+            return np.repeat(np.repeat(x,n,axis=0),n,axis=1)*n
         elif type=="3d":
             return np.repeat(np.repeat(np.repeat(x,n,axis=0),n,axis=1),n,axis=2)
         else:
@@ -24,7 +24,7 @@ def get_cube(x,y,z,l,map,level,type, xmin=0.,xmax=1.,ymin=0.,ymax=1.,zmin=0.,zma
         """
         project the data of current level on a grid
         """
-        
+
         if level==lmax:
             mask=np.where(l>=level)[0]
             w=map[mask] * np.power(0.5,3*(l[mask]-lmax))
