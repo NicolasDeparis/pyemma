@@ -110,7 +110,8 @@ class Fof:
     def write_infosim(self):
         self.getLmin()
         with open("%sinfosim.txt"%self.exec_folder,"w") as f:
-            f.write("Npro %d\n"%self.nproc_sim)
+            # f.write("Npro %d\n"%self.nproc_sim)
+            f.write("Npro %d\n"%1)
             f.write("Ndim 3\n")
             f.write("lmin %d\n"%self.lmin)
 
@@ -138,6 +139,8 @@ class Fof:
         self.ncpu = nproc_fof
         self.write_fofin()
         self.write_infosim()
+
+        self.convert()
 
         curdir=os.getcwd()
         os.chdir(self.exec_folder)
@@ -204,6 +207,125 @@ class Fof:
                 dummy=np.fromfile(f,dtype=np.int32,count=1)[0]
                 nfoftot+=np.fromfile(f,dtype=np.int32,count=1)[0]
         self.nfoftot=nfoftot
+
+
+    def convert(self):
+
+        import h5py
+
+        path = self.folder
+        stepnum = self.stepnum
+
+
+
+        folder ="%s%05d/"%(path, stepnum)
+        f = h5py.File("%spart_x_%05d.h5"%(folder,stepnum), "r")
+        tsim = f.attrs['a']
+        data = f['data'][:]
+        f.close()
+
+        try:
+            os.mkdir("%s/part_x"%folder)
+        except FileExistsError:
+            pass
+        f=open("%s/part_x/x.%05d.p00000"%(folder,stepnum), "wb")
+        f.write(np.array([len(data)], dtype=np.int32).tobytes())
+        f.write(np.array([1], dtype=np.int32).tobytes())
+        f.write(np.array([tsim], dtype=np.float32).tobytes())
+        for i in range(7):
+            f.write(np.array([1], dtype=np.int32).tobytes())
+        f.write(np.array(data, dtype=np.float32).tobytes())
+        f.close()
+
+        f = h5py.File("%spart_y_%05d.h5"%(folder,stepnum), "r")
+        tsim = f.attrs['a']
+        data = f['data'][:]
+        f.close()
+
+        try:
+            os.mkdir("%s/part_y"%folder)
+        except FileExistsError:
+            pass
+        f=open("%spart_y/y.%05d.p00000"%(folder,stepnum), "wb")
+        f.write(np.array([len(data)], dtype=np.int32).tobytes())
+        f.write(np.array([1], dtype=np.int32).tobytes())
+        f.write(np.array([tsim], dtype=np.float32).tobytes())
+        for i in range(7):
+            f.write(np.array([1], dtype=np.int32).tobytes())
+        f.write(np.array(data, dtype=np.float32).tobytes())
+        f.close()
+
+        try:
+            os.mkdir("%s/part_z"%folder)
+        except FileExistsError:
+            pass
+        f = h5py.File("%spart_z_%05d.h5"%(folder,stepnum), "r")
+        tsim = f.attrs['a']
+        data = f['data'][:]
+        f.close()
+        f=open("%spart_z/z.%05d.p00000"%(folder,stepnum), "wb")
+        f.write(np.array([len(data)], dtype=np.int32).tobytes())
+        f.write(np.array([1], dtype=np.int32).tobytes())
+        f.write(np.array([tsim], dtype=np.float32).tobytes())
+        for i in range(7):
+            f.write(np.array([1], dtype=np.int32).tobytes())
+        f.write(np.array(data, dtype=np.float32).tobytes())
+        f.close()
+
+        f = h5py.File("%spart_vx_%05d.h5"%(folder,stepnum), "r")
+        tsim = f.attrs['a']
+        data = f['data'][:]
+        f.close()
+
+        try:
+            os.mkdir("%s/part_vx"%folder)
+        except FileExistsError:
+            pass
+        f=open("%spart_vx/vx.%05d.p00000"%(folder,stepnum), "wb")
+        f.write(np.array([len(data)], dtype=np.int32).tobytes())
+        f.write(np.array([1], dtype=np.int32).tobytes())
+        f.write(np.array([tsim], dtype=np.float32).tobytes())
+        for i in range(7):
+            f.write(np.array([1], dtype=np.int32).tobytes())
+        f.write(np.array(data, dtype=np.float32).tobytes())
+        f.close()
+
+        f = h5py.File("%spart_vy_%05d.h5"%(folder,stepnum), "r")
+        tsim = f.attrs['a']
+        data = f['data'][:]
+        f.close()
+
+        try:
+            os.mkdir("%s/part_vy"%folder)
+        except FileExistsError:
+            pass
+        f=open("%spart_vy/vy.%05d.p00000"%(folder,stepnum), "wb")
+        f.write(np.array([len(data)], dtype=np.int32).tobytes())
+        f.write(np.array([1], dtype=np.int32).tobytes())
+        f.write(np.array([tsim], dtype=np.float32).tobytes())
+        for i in range(7):
+            f.write(np.array([1], dtype=np.int32).tobytes())
+        f.write(np.array(data, dtype=np.float32).tobytes())
+        f.close()
+
+        f = h5py.File("%spart_vz_%05d.h5"%(folder,stepnum), "r")
+        tsim = f.attrs['a']
+        data = f['data'][:]
+        f.close()
+
+        try:
+            os.mkdir("%s/part_vz"%folder)
+        except FileExistsError:
+            pass
+        f=open("%spart_vz/vz.%05d.p00000"%(folder,stepnum), "wb")
+        f.write(np.array([len(data)], dtype=np.int32).tobytes())
+        f.write(np.array([1], dtype=np.int32).tobytes())
+        f.write(np.array([tsim], dtype=np.float32).tobytes())
+        for i in range(7):
+            f.write(np.array([1], dtype=np.int32).tobytes())
+        f.write(np.array(data, dtype=np.float32).tobytes())
+        f.close()
+
 
 ####################################################################################################################
 # READERS
