@@ -21,7 +21,7 @@ class Run:
 
         self._hdf5 = True
 
-        for folder in os.listdir(self._data_folder):
+        for folder in np.sort(os.listdir(self._data_folder)):
             try:
                 stepnum=int(folder)
             except ValueError:
