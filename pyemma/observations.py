@@ -329,7 +329,12 @@ def luminosity_function_fit(redshift):
         LFB=ps*np.log(10)/2.5*10.**(-0.4*(MB-ms)*(a+1))*np.exp(-10**(-0.4*(MB-ms)))
     return MB, LFB
 
-def optical_depth():
+def optical_depth(get=0):
+    """
+    plot data if get==0
+    plot data and return values if get==1
+    """
+
     zbecker2013=[2.15 ,2.25 ,2.35,2.45,2.55,2.65,2.75,2.85,2.95,3.05,3.15,3.25 ,3.35,3.45,3.55,3.65,3.75,3.85,3.95,4.05,4.15,4.25,4.35,4.45,4.55,4.65,4.75,4.85]
     meanFbecker2013=[0.8806, 0.8590, 0.8304, 0.7968, 0.7810, 0.7545, 0.7371, 0.7167, 0.6966, 0.6670, 0.6385, 0.6031, 0.5762, 0.5548, 0.5325, 0.4992, 0.4723, 0.4470, 0.4255, 0.4030, 0.3744, 0.3593,0.3441, 0.3216,0.3009, 0.2881, 0.2419, 0.2225]
     errmeanFbecker2013=[0.0103,0.0098,0.0093,0.0089,0.0090,0.0088,0.0088,0.0086,0.0084,0.0082,0.0080,0.0079,0.0074,0.0071,0.0071,0.0069,0.0068,0.0072,0.0071,0.0071,0.0074,0.0075,0.0102,0.0094,0.0104,0.0117,0.0201,0.0151]
@@ -390,15 +395,19 @@ def optical_depth():
     0.1215,0.1217,0.1293,0.0322,0.0665,0.0858,0.0690,0.1650,0.0714,0.0775,0.0895,0.1292,0.1509,0.0687,0.0729,0.0795,0.0802,0.0934,0.0125,0.0071,
     0.0402,0.0407,0.0546,0.0495,0.1015,0.1376,0.0869]
 
+    if get==0:
+        plt.scatter(z_abs_fan2006,-np.log(Fmoy_fan2006), marker='o', facecolors='none', edgecolors='k', label=r"$\mathrm{Fan \, 2006}$")
+        plt.errorbar(zbecker2013,teffbecker2013,yerr=errtaueffbecker2013, fmt='go',mfc='None', mec='g', label=r"$\mathrm{Becker \, 2013}$")
+        plt.errorbar(zabs_beck_2014,-np.log(Fmoy_beck_2014),yerr=errtaueff_beck_2014, fmt='bs' ,mfc='None', mec='b', label=r"$\mathrm{Becker \, 2015}$")
+        plt.errorbar(zabs_beck_2014_2, y, yerr=(ybot, ytop),fmt='bs',mfc='None', mec='w')
 
-    plt.scatter(z_abs_fan2006,-np.log(Fmoy_fan2006), marker='o', facecolors='none', edgecolors='k', label=r"$\mathrm{Fan \, 2006}$")
-    plt.errorbar(zbecker2013,teffbecker2013,yerr=errtaueffbecker2013, fmt='go',mfc='None', mec='g', label=r"$\mathrm{Becker \, 2013}$")
-    plt.errorbar(zabs_beck_2014,-np.log(Fmoy_beck_2014),yerr=errtaueff_beck_2014, fmt='bs' ,mfc='None', mec='b', label=r"$\mathrm{Becker \, 2015}$")
-    plt.errorbar(zabs_beck_2014_2, y, yerr=(ybot, ytop),fmt='bs',mfc='None', mec='w')
+        for i in range(len(zulasj01480600)):
+            plt.arrow(zulasj01480600[i], -np.log(2*errFmoy_j01480600[i]),dxarrow[i],dyarrow[i], fc="b", ec="b",head_width=0.04, head_length=0.2)
 
-    for i in range(len(zulasj01480600)):
-        plt.arrow(zulasj01480600[i], -np.log(2*errFmoy_j01480600[i]),dxarrow[i],dyarrow[i], fc="b", ec="b",head_width=0.04, head_length=0.2)
-
+    if get==1:
+        z_all = np.concatenate((z_abs_fan2006,zbecker2013,zabs_beck_2014))
+        t_all = np.concatenate((-np.log(Fmoy_fan2006),teffbecker2013,-np.log(Fmoy_beck_2014)))
+        return(z_all, t_all)
 
 
 def baryonic_fraction(info):
@@ -406,8 +415,10 @@ def baryonic_fraction(info):
     from Okamoto 2008 : http://mnras.oxfordjournals.org/content/390/3/920.full.pdf
     """
 
-    fb = info.ob/info.om
+    TODO
 
-    alpha = 2
-
-    res= (1+ (2**(alpha/3)-1) * (M/Mc)**(-alpha)  )**(-3/alpha)
+    # fb = info.ob/info.om
+    #
+    # alpha = 2
+    #
+    # res= (1+ (2**(alpha/3)-1) * (M/Mc)**(-alpha)  )**(-3/alpha)

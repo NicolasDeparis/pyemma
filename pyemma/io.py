@@ -6,6 +6,7 @@ import h5py
 
 import fof
 # import hop
+import optical_depth
 
 class Run:
     """
@@ -43,6 +44,8 @@ class Step:
         self.part=Fields(number,folder,"part_")
         self.star=Fields(number,folder,"star_")
         self.grid=Fields(number,folder,"grid_")
+
+        self.optical_depth=optical_depth.OpticalDepth()
 
 #comment these line in case of probleme with halo finder
 #       self.hop=hop.Hop(number,folder)
