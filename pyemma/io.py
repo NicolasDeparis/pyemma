@@ -39,19 +39,23 @@ class Step:
     def __init__(self,number,folder):
         """
         Step object
+        Contain all the data associated to an output time step
         """
 
-        self.part=Fields(number,folder,"part_")
-        self.star=Fields(number,folder,"star_")
-        self.grid=Fields(number,folder,"grid_")
+        self.n=number # snap number
 
-        self.optical_depth=optical_depth.OpticalDepth()
+        self.a=self.grid._get_a() # scale factor
+        self.z=1./self.a -1 # redshift
+
+        self.part=Fields(number,folder,"part_") #particles
+        self.star=Fields(number,folder,"star_") #stars
+        self.grid=Fields(number,folder,"grid_") #AMR grid
+
+        self.optical_depth=optical_depth.OpticalDepth() #Optical depth
 
 #comment these line in case of probleme with halo finder
 #       self.hop=hop.Hop(number,folder)
         self.fof=fof.Fof(folder,number)
-
-        self.a=self.grid._get_a()
 
 class Fields:
     def __init__(self, number,folder, sets_type):

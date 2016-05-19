@@ -5,12 +5,13 @@ class OpticalDepth:
     def __init__(self):
         pass
 
-    def LOS (self, x, y, z, l, d, t, vz, xion, l_coarse) :
+    def _LOS (self, x, y, z, l, d, t, vz, xion) :
         """
         Line Of Sight
         Récupère l'information d'une ligne de visée
         """
 
+        l_coarse=np.min(l)
         maskl = [l==l_coarse]
         x_rand = np.random.choice(x[maskl])
         y_rand = np.random.choice(y[maskl])
@@ -33,14 +34,15 @@ class OpticalDepth:
         return l_new, d_new, t_new, vz_new, xion_new
 
 
-    def THR (self, x_init, y_init, z_init, l_init, d_init, t_init, vz_init, xion_init, l_coarse) :
+    def _THR (self, x_init, y_init, z_init, l_init, d_init, t_init, vz_init, xion_init, l_coarse) :
         """
         To Higher Resolution
         Permet de passer de l=7 à l=10 (pour avoir toute l'information sur une ligne de visée)
         """
-        l, d, t, vz, xion = self.LOS(x_init, y_init, z_init, l_init, d_init, t_init, vz_init, xion_init, l_coarse)
+        l, d, t, vz, xion = self._LOS(x_init, y_init, z_init, l_init, d_init, t_init, vz_init, xion_init)
 
-        n=1024
+        lmax = np.max(l_init)
+        n=2**(lmax)
         d_new = np.zeros(n)
         t_new = np.zeros(n)
         vz_new = np.zeros(n)
@@ -48,7 +50,7 @@ class OpticalDepth:
 
         idx=0
         for i in range(len(l)) :
-            for j in range(int(pow(2,10-l[i]))) :
+            for j in range(int(pow(2,lmax-l[i]))) :
                 d_new[idx] = d[i]
                 t_new[idx] = t[i]
                 vz_new[idx] = vz[i]
@@ -57,7 +59,6 @@ class OpticalDepth:
                 idx+=1
 
         return d_new, t_new,vz_new, xion_new
-
 
     def get_LOS(self,step, nline):
         self.nline = nline
@@ -70,7 +71,7 @@ class OpticalDepth:
         lmin = np.min(step.grid.l.data)
 
         for i in range(self.nline) :
-            self.LOS_d[i], self.LOS_t[i], self.LOS_vz[i], self.LOS_xion[i] = self.THR(
+            self.LOS_d[i], self.LOS_t[i], self.LOS_vz[i], self.LOS_xion[i] = self._THR(
                 step.grid.x.data,
                 step.grid.y.data,
                 step.grid.z.data,
@@ -80,13 +81,6 @@ class OpticalDepth:
                 step.grid.field_w.data,
                 step.grid.xion.data,
                 lmin)
-
-    def error (self, tab, mean) :
-        S = 0
-        for i in tab :
-            S += pow(mean-i,2)
-        S /= (len(tab)**2)
-        return np.sqrt(S)
 
     def get_tau(self, run, step):
 
@@ -122,19 +116,21 @@ class OpticalDepth:
         nHI = self.LOS_d * (1-self.LOS_xion) # atome H neutre m-3
         self.LOS_vz /= run.param.info.unit_v / aexp # m s-1
 
+        self.teff=np.zeros(self.nline)
         self.tau_liste=np.zeros((self.nline,nb_seg))
 
         for k in range(self.nline):
+            if (k+1)%(100) == 0 :   # Affiche toutes les 100 lignes de visées réalisées
+                print(k+1, '-> Done..')
 
             vtot = v_H + self.LOS_vz[k]
             bHI = np.sqrt(2*kB*self.LOS_t[k]/mH) # m s-1
+
+            # need a floor value to avoid divide by 0
+            bHI[bHI==0]=1e-5
 
             for i in range(nb_seg) :
                 gauss = (nHI[k]/bHI) * np.exp(-((v_H[i]-vtot)/bHI)**2)
                 self.tau_liste[k][i] = K*np.sum(gauss)
 
-            if (k+1)%(100) == 0 :   # Affiche toutes les 100 lignes de visées réalisées
-                print(k+1, '-> Done..')
-
-        self.tau_mean = np.mean(np.exp(-self.tau_liste))
-        self.tau_err = self.error(np.exp(-self.tau_liste) , self.tau_mean)
+            self.teff[k] = -np.log(np.mean(np.exp(-self.tau_liste[k])))
