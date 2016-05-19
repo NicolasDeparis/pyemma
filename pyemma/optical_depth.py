@@ -1,6 +1,12 @@
 # coding: utf-8
 import numpy as np
 
+"""
+For more information about this file see Chardin et al 2015
+http://adsabs.harvard.edu/abs/2015MNRAS.453.2943C
+This is an adaptation of Chardin's code
+"""
+
 class OpticalDepth:
     def __init__(self):
         pass
@@ -103,7 +109,18 @@ class OpticalDepth:
         kB = 1.3806488e-23
         Mpc = 3.085677581e22
 
-        sigma_alpha = 4.48e-22
+        # sigma_alpha = 4.48e-22 #theuns 1998
+
+        sigma_thomson=6.625e-21 #theuns 1998
+
+        sigma_thomson=2.35188329313e-22 # EMMA 1grp sigma E
+        # sigma_thomson=1.82867991612e-22 # EMMA 1grp sigma I
+
+        f = 0.41615 #oscillator strength
+        lambda0 = 1215.6 *1e-10 # H lyman alpha transition, angstrom -> m
+        sigma_alpha=np.sqrt(3.*np.pi*sigma_thomson/8.)*f*lambda0
+
+        print(sigma_alpha)
 
         taille_seg = taille_boite * aexp / nb_seg  # Mpc
         H_z = H0 * np.sqrt((1-oM-oV)/(aexp**2) + oM/(aexp**3) + oV) # km s-1 Mpc-1 \\* 3.2407e-20 (s-1)
