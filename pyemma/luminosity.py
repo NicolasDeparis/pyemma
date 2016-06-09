@@ -12,7 +12,7 @@ def flux2mag(flux):
     mag = -2.5*np.log10(flux)
     return mag
 
-def readStarburst(convert=False):
+def readStarburst_old(convert=False):
 
     filename="/home/deparis/jupyter/Starburst99/fig1e.dat.txt"
     #reading header
@@ -33,6 +33,24 @@ def readStarburst(convert=False):
         data[1:] *= 1e-7/1e-10 #log(Erg/A) -> J/m/s
 
     return age,data[0], data[1:]
+
+def readStarburst(convert=False):
+
+    # file = "../jupyter/Starburst99/Salpeter/SALP_AUBERT.spectrum1"
+    file = "../jupyter/Starburst99/Topheavy/TH_AUBERT.spectrum1"
+    # file = "../jupyter/Starburst99/Kroupa/KROUPA_DOM.spectrum1"
+
+    data = np.loadtxt(file,unpack=True,skiprows=6)
+    time = np.unique(data[0,:])
+
+    spectrum = []
+    for cur_time in time:
+            mask=data[0,:]==cur_time
+            cur_data = data[:,mask]
+            wavelenght = cur_data[1]
+            spectrum.append(np.power(10,cur_data[2]))
+
+    return time, wavelenght, spectrum
 
 def getM1600(_x0, spectremodeleenergparsparAngstrom):
     """
@@ -107,20 +125,38 @@ def get_all_flux_1600(stars,current_time,unit_mass):
 
     stars.flux_1600=flux
 
-def get_all_flux_UV(stars,current_time,unit_mass):
+def get_all_flux_UV(mass,age,current_time,unit_mass,run):
     """
     get luminous flux of stars in UV
     """
 
-    def getflux_UV(age):
-        tlife = 3.673e6 #yr
-        E0 = 3.399e16 #phot/s/kg
+    def getflux_UV(age,tlife,E0):
         y=np.ones(len(age)) *E0
         y[age>tlife] *= np.power(age[age>tlife]/tlife ,-4.)
         return y
 
+    tlife = run.tlife_rad #year
+    E0 = run.src_int_or_fesc*run.fesc #phot/s/kg
+
+    mass *= unit_mass # kg
+    flux = getflux_UV(current_time-age,tlife,E0) # #phot/s/kg
+    return  flux*mass #phot/s
+
+def get_all_flux_UV_old(stars,current_time,unit_mass,run):
+    """
+    get luminous flux of stars in UV
+    """
+
+    def getflux_UV(age,tlife,E0):
+        y=np.ones(len(age)) *E0
+        y[age>tlife] *= np.power(age[age>tlife]/tlife ,-4.)
+        return y
+
+    tlife = run.tlife_rad #year
+    E0 = run.src_int_or_fesc #phot/s/kg
+
     mass = stars.mass.data*unit_mass # kg
-    flux = getflux_UV(current_time - stars.age.data) # #phot/s/kg
+    flux = getflux_UV(current_time - stars.age.data,tlife,E0) # #phot/s/kg
     stars.flux_UV = mass * flux #phot/s
 
 def get_tot_egy(age, tlife):

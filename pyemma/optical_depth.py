@@ -43,7 +43,7 @@ class OpticalDepth:
     def _THR (self, x_init, y_init, z_init, l_init, d_init, t_init, vz_init, xion_init, l_coarse) :
         """
         To Higher Resolution
-        Permet de passer de l=7 à l=10 (pour avoir toute l'information sur une ligne de visée)
+        Permet de passer de l=lcoarse à l=l_max (pour avoir toute l'information sur une ligne de visée)
         """
         l, d, t, vz, xion = self._LOS(x_init, y_init, z_init, l_init, d_init, t_init, vz_init, xion_init)
 
@@ -99,7 +99,7 @@ class OpticalDepth:
         h = H0/100
         taille_boite = run.param.info.box_size_hm1_Mpc/h
 
-        lmin=run.param.info.level_min
+        lmin=np.min(step.grid.l.data)
         lmax=np.max(step.grid.l.data)
 
         nb_seg = int(2**lmax)
@@ -108,19 +108,7 @@ class OpticalDepth:
         mH = 1.672623e-27
         kB = 1.3806488e-23
         Mpc = 3.085677581e22
-
-        # sigma_alpha = 4.48e-22 #theuns 1998
-
-        sigma_thomson=6.625e-21 #theuns 1998
-
-        sigma_thomson=2.35188329313e-22 # EMMA 1grp sigma E
-        # sigma_thomson=1.82867991612e-22 # EMMA 1grp sigma I
-
-        f = 0.41615 #oscillator strength
-        lambda0 = 1215.6 *1e-10 # H lyman alpha transition, angstrom -> m
-        sigma_alpha=np.sqrt(3.*np.pi*sigma_thomson/8.)*f*lambda0
-
-        print(sigma_alpha)
+        sigma_alpha = 4.48e-22 #theuns 1998
 
         taille_seg = taille_boite * aexp / nb_seg  # Mpc
         H_z = H0 * np.sqrt((1-oM-oV)/(aexp**2) + oM/(aexp**3) + oV) # km s-1 Mpc-1 \\* 3.2407e-20 (s-1)

@@ -44,14 +44,15 @@ class Step:
 
         self.n=number # snap number
 
-        self.a=self.grid._get_a() # scale factor
-        self.z=1./self.a -1 # redshift
-
         self.part=Fields(number,folder,"part_") #particles
         self.star=Fields(number,folder,"star_") #stars
         self.grid=Fields(number,folder,"grid_") #AMR grid
 
         self.optical_depth=optical_depth.OpticalDepth() #Optical depth
+
+        self.a=self.grid._get_a() # scale factor
+        self.z=1./self.a -1 # redshift
+
 
 #comment these line in case of probleme with halo finder
 #       self.hop=hop.Hop(number,folder)

@@ -2,6 +2,7 @@
 
 import numpy as np
 import pickle
+# import cPickle as pickle
 import os
 from scipy import spatial
 
@@ -92,6 +93,11 @@ class Fof:
         elif name == 'part_mass_fine':
             self.get_part_mass_fine()
             return self.__getattribute__(name)
+
+        elif name == 'getStars':
+            self.get_getStars()
+            return self.__getattribute__(name)
+
 
 
         else:
@@ -483,6 +489,23 @@ class Fof:
 
         setattr(self,type,part)
 
+    def get_stars_radius(self,stars):
+        """
+        get distance of all stars in halo compare to the center of the halo
+        """
+
+        self.stars_radius=np.zeros(self.nfoftot,dtype=np.object)
+
+        for i in range(self.nfoftot):
+            if self.getStars[i]:
+
+                dx=self.x[i]- stars.x.data[self.stars[i]]
+                dy=self.y[i]- stars.y.data[self.stars[i]]
+                dz=self.z[i]- stars.z.data[self.stars[i]]
+
+                self.stars_radius[i]=np.sqrt(np.power(dx,2)+np.power(dy,2)+np.power(dz,2))
+
+
     def get_star_fine(self,grid, stars, force=0):
         """
         get halo stars the fine way
@@ -522,6 +545,31 @@ class Fof:
 
         with open(name, 'wb') as output:
             pickle.dump(self.stars_fine, output,-1)
+
+    def get_getStars(self):
+        """
+        get halo with stars
+        """
+
+        self.getStars=np.zeros(self.nfoftot, dtype=np.bool)
+        for i in range(self.nfoftot):
+            if len(self.stars[i])>0:
+                self.getStars[i]=True
+
+    def get_getYoungStars(self,star,age_max):
+        """
+        Check if halo get stars of age lower than age_max
+        """
+
+        n=self.nfoftot
+        self.getYoungStars=np.zeros(n, dtype=np.bool)
+        for i in range(self.nfoftot):
+            if self.getStars[i]:
+
+                t=np.max(star.age.data)
+                youngest_stars = np.min(t- star.age.data[self.stars[i]])
+                if youngest_stars <= age_max:
+                    self.getYoungStars[i] = True
 
     def get_cells(self,grid, force=0):
         """
@@ -626,6 +674,7 @@ class Fof:
                 part_mass[i]=np.sum(part.mass.data[partID[i]])
             part_mass = part_mass/1.9891e30*info.unit_mass
             setattr(self,type,part_mass)
+
         if type == "part_mass":
             partID = self.part
             part_mass=np.zeros(self.nfoftot)
@@ -634,8 +683,6 @@ class Fof:
                 part_mass[i]=unit_mass*len(partID[i])
             part_mass = part_mass/1.9891e30*info.unit_mass
             setattr(self,type,part_mass)
-
-
 
     def get_part_mass_fine(self):
         """
@@ -719,10 +766,11 @@ class Fof:
         info = io.Info(self.path+"../../../")
 
         t=time.a2t_quad(cur_step.a, info.om, info.H0)
-
         luminosity.get_all_flux_1600(cur_step.star,t,info.unit_mass)
-
         flux = cur_step.star.flux_1600
+
+        print("WARNING applying escape fraction of 0.35")
+        flux *= 0.35
 
         flux_tot=np.zeros(self.nfoftot)
         for i in range(self.nfoftot):
@@ -730,13 +778,55 @@ class Fof:
         self.star_flux_1600=flux_tot
         self.mag_1600=luminosity.flux2mag(flux_tot[flux_tot!=0])
 
+    def get_ageLuminosity(self,cur_step):
+        """
+        compute the age of stars when photon arriving at R200 were emited
+        """
+        t=np.max(cur_step.star.age.data)
+        from pyemma import io,time,luminosity
+        info = io.Info(self.path+"../../../")
+        run = io.RunParam(self.path+"../../../")
+
+        self.ageLuminosity=np.zeros(self.nfoftot,dtype=np.object)
+
+        for i in range(self.nfoftot):
+            if self.getStars[i]:
+                dt = (self.R200[i] - self.stars_radius[i]) *cur_step.a*info.unit_l /(run.clight*299792458) /(365*24*3600)
+                # dt = self.R200[i] *cur_step.a *info.unit_l /(run.clight*299792458) /(365*24*3600) # yr
+                self.ageLuminosity[i]= t -cur_step.star.age.data[self.stars[i]] -dt # yr
+
     def get_luminosity_UV(self,cur_step):
+        from pyemma import io,luminosity
+        run = io.RunParam(self.path+"../../../")
+        info = io.Info(self.path+"../../../")
+
+        tlife = run.tlife_rad #yr
+        E0 = run.src_int_or_fesc*run.fesc #phot/s/kg
+
+        def model_flux_UV(age,tlife,E0):
+            y=np.ones(len(age)) *E0
+            y[age>tlife] *= np.power(age[age>tlife]/tlife ,-4.)
+            y[age<0] = 0
+            return y
+
+        self.star_flux_UV=np.zeros(self.nfoftot)
+        for i in range(self.nfoftot):
+            if self.getStars[i]:
+
+                flux=model_flux_UV(self.ageLuminosity[i],tlife,E0) # #phot/s/kg
+                mass=cur_step.star.mass.data[self.stars[i]] *info.unit_mass # kg
+                self.star_flux_UV[i]=np.sum(flux*mass) #phot/s
+
+        # self.mag_UV=luminosity.flux2mag(self.star_flux_UV)
+
+    def get_luminosity_UV_old(self,cur_step, dt=0):
         from pyemma import io, time,luminosity
         info = io.Info(self.path+"../../../")
+        run = io.RunParam(self.path+"../../../")
 
         t=time.a2t_quad(cur_step.a, info.om, info.H0)
 
-        luminosity.get_all_flux_UV(cur_step.star,t,info.unit_mass)
+        luminosity.get_all_flux_UV_old(cur_step.star,t,info.unit_mass,run)
 
         flux = cur_step.star.flux_UV
 
@@ -745,7 +835,6 @@ class Fof:
             flux_tot[i]=np.sum(flux[self.stars[i]])
         self.star_flux_UV=flux_tot
         self.mag_UV=luminosity.flux2mag(flux_tot[flux_tot!=0])
-
 ####################################################################################################################
 ####################################################################################################################
 
@@ -891,7 +980,7 @@ class Fof:
 # FLUX AT R200
 ####################################################################################################################
 
-    def get_flux_r200(self,grid, type, fact=1, force=0):
+    def get_flux_r200(self,grid, type, fact=1, force=0, getonly=0):
         """
         type could be : hydro, rad, ref
 
@@ -905,16 +994,17 @@ class Fof:
             print("Reading %s"%name)
             with open(name, 'rb') as input:
                 setattr(self,"flux_data_%s_%s"%(type,fact_name),pickle.load(input))
-                setattr(self,"mean_flux_%s_%s"%(type,fact_name),pickle.load(input))
+                setattr(self,"tot_flux_%s_%s"%(type,fact_name),pickle.load(input))
             return
 
         #healpix shere
         import healpy as hp
         n=4
         nside = 2**n
-        x_healpix,y_healpix,z_healpix=hp.pix2vec(nside, range(hp.nside2npix(nside) ))
+        n_healpix = hp.nside2npix(nside)
+        x_healpix,y_healpix,z_healpix=hp.pix2vec(nside, range(n_healpix))
 
-        mean_flux = np.zeros(self.nfoftot)
+        tot_flux = np.zeros(self.nfoftot)
         flux_data=np.empty(self.nfoftot, dtype=np.object)
 
         skipped = 0
@@ -932,6 +1022,19 @@ class Fof:
             # skip halo smaller than ncells_min
             ncells_min = 2
             if (len(cells)<ncells_min):
+                skipped +=1
+                continue
+
+            # skip halo smaller than ncells_min
+            # l_min = 11
+            # if (np.min(grid.l.data[cells])<l_min):
+            #     skipped +=1
+            #     continue
+
+            # skip boundary conditions
+            if (xc+R200 >1.) | (xc-R200 <0.) | \
+               (yc+R200 >1.) | (yc-R200 <0.) | \
+               (zc+R200 >1.) | (zc-R200 <0.):
                 skipped +=1
                 continue
 
@@ -965,27 +1068,37 @@ class Fof:
 
             if type == "ref":
                 #reference flux
-                fx=-np.ones(len(cells))
-                fy=-np.ones(len(cells))
-                fz=-np.ones(len(cells))
+                fx=np.ones(len(cells))*3
+                fy=np.zeros(len(cells))
+                fz=np.zeros(len(cells))
+
+            #surface element
+            ds= 4*np.pi*(fact*R200)**2 / n_healpix
 
             # scalar product
             flux_data[halo_num]=(x_healpix*fx[idx] +
                                  y_healpix*fy[idx] +
-                                 z_healpix*fz[idx] )    *4*np.pi*(fact*R200)**2
-            # mean flux
-            mean_flux[halo_num]=np.mean(flux_data[halo_num])
+                                 z_healpix*fz[idx] ) * ds
 
-        # mean_scal_rad[abs(mean_scal_rad) < abs(mean_scal_ref) ]=0
+            #consider only outflow
+            if getonly >0:
+                flux_data[halo_num][flux_data[halo_num]<0]=0
+
+            #consider only inflow
+            if getonly <0:
+                flux_data[halo_num][flux_data[halo_num]>0]=0
+
+            # tot flux
+            tot_flux[halo_num]=np.sum(flux_data[halo_num])
 
         print("skipped %d/%d = %.02f %%"%(skipped,self.nfoftot, skipped/self.nfoftot*100))
 
         setattr(self,"flux_data_%s_%s"%(type,fact_name),flux_data)
-        setattr(self,"mean_flux_%s_%s"%(type,fact_name),mean_flux)
+        setattr(self,"tot_flux_%s_%s"%(type,fact_name),tot_flux)
 
         with open(name, 'wb') as output:
             pickle.dump(flux_data, output,-1)
-            pickle.dump(mean_flux, output,-1)
+            pickle.dump(tot_flux, output,-1)
 
         print("get_flux_r200 done")
 
@@ -1005,6 +1118,29 @@ class Fof:
             self.instant_sfr[halo_num]=np.sum( (stars.mass.data[star_mask])[age<thresh] )
             self.instant_sfr[halo_num]*=info.unit_mass/1.9891e30
             self.instant_sfr[halo_num]/=thresh
+
+    def get_instant_SFR_from_gas(self,step,param):
+        """
+        compute theorical instant SFR using e*rho/tff
+        need cells
+        """
+
+        rho=step.grid.field_d.data *param.info.unit_mass /  np.power(step.a *param.info.unit_l,3, dtype=np.float128)
+
+        n_halo = self.nfoftot
+        self.instant_SFR_from_gas = np.zeros(n_halo)
+        for ihalo in range(n_halo):
+
+
+            if len(self.cells[ihalo])>0:
+                dx=np.power(0.5,step.grid.l.data[self.cells[ihalo]]) *param.info.box_size_hm1_Mpc *step.a *param.info.unit_l
+                dv=np.power(dx,3, dtype=np.float128)
+
+                rho_halo=rho[self.cells[ihalo]] # kg.m-3
+                tff=np.sqrt(3*np.pi/(32*6.67384e-11*rho_halo)) # s
+
+                self.instant_SFR_from_gas[ihalo] = np.mean(param.run.efficiency*rho_halo/tff * dv)  # kg.s-1
+                self.instant_SFR_from_gas[ihalo]*= 1./2e30 *(365*24*3600) # Mo.yr-1
 
     def get_time_newest_star(self, stars):
         self.time_newest_star=np.zeros(self.nfoftot)

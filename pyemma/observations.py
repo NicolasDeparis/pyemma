@@ -182,6 +182,7 @@ def xion():
     """
     Observational constraints for xion.
     data from Bouwens 2015
+    http://cdsads.u-strasbg.fr/abs/2015ApJ...811..140B
     """
 
 
@@ -204,20 +205,36 @@ def xion():
     y=z[:,1]
 
     yerror = [-z[:,3], z[:,2]]
+    plt.errorbar(x, 1.-y, xerr=None, yerr=yerror, ls='none', fmt='ko', label="Fan 2006")
 
 
-    plt.errorbar(x, 1.-y, xerr=None, yerr=yerror, ls='none', fmt='ko', label="Observations")
+
+    ### pour les limites
+    taille_erreur = 0.2 ### taille de la fleche, en dex
+
+    # 5.9 >0.89 Dark Gaps in Quasar Spectra McGreer et al. (2015)
+    # 5.6 >0.91 Dark Gaps in Quasar Spectra McGreer et al. (2015)
+    z2 = np.array([ [ 5.9, 0.89, 0.05, 0 ], [ 5.6, 0.91, 0.05, 0 ] ]) ### limites sup
+    x2 = z2[:,0]
+    y2 = z2[:,1]
+    yerror2 = [ (1-z2[:,1])*(1-10**(-taille_erreur)), z2[:,3] ] ### (1-z2[:,1])*(1-10**(-taille_erreur)) => pour que toute les fleche est la même taille
+    plt.errorbar(x2, 1.-y2, xerr=None, yerr=yerror2, ls='none', fmt='ko', uplims=True )
+
+    # 6.24-6.42 <0.9 (2) Ly Damping Wing of Quasars Schroeder et al. (2013)
+    # Higher-Redshift Constraints
+
+    # Prevalence of Lyα Emission in Galaxies S14
+    # 4. 8.0 QHII (z = 8) < 0.35 Prevalence of Lyα Emission in Galaxies S14
+    z3 = np.array([ [ 6.3, 0.9, 0, 0.1 ], [ 8.0, 0.35, 0, 0.1 ] ]) ### limites inf
+    x3 = z3[:,0]
+    y3 = z3[:,1]
+    yerror3 = [ z3[:,2], (1-z3[:,1])*(10**(taille_erreur)-1) ] ### (1-z3[:,1])*(10**(taille_erreur)-1) => pour que toute les fleche est la même taille
+    plt.errorbar(x3, 1.-y3, xerr=None, yerr=yerror3, ls='none', fmt='ko', lolims=True )
+
+
 
 
     """
-    5.9 >0.89 Dark Gaps in Quasar Spectra McGreer et al. (2015)
-    5.6 >0.91 Dark Gaps in Quasar Spectra McGreer et al. (2015)
-    6.24-6.42 <0.9 (2) Ly Damping Wing of Quasars Schroeder et al. (2013)
-    Higher-Redshift Constraints
-
-
-    Prevalence of Lyα Emission in Galaxies S14
-    4. 8.0 QHII (z = 8) < 0.35 Prevalence of Lyα Emission in Galaxies S14
     Continuity with Ionizing Emissivity Estimates at z = 4.75
     5. log10 N˙
     ion(z = 4.75) = 1050.99±0.45 s
@@ -422,3 +439,114 @@ def baryonic_fraction(info):
     # alpha = 2
     #
     # res= (1+ (2**(alpha/3)-1) * (M/Mc)**(-alpha)  )**(-3/alpha)
+
+
+
+def stellar_mass_function(redshift):
+    """
+    from song et al 2015
+    http://arxiv.org/pdf/1507.05636v1.pdf
+
+    available redshift are : 4, 5, 6, 7, 8
+    """
+
+    z = [4, 5, 6, 7, 8]
+    M = [7.25,7.75,8.25,8.75,9.25,9.75,10.25,10.75,11.25]
+
+    data = [
+    [
+    [-1.57, +0.21, -0.16],
+    [-1.47, +0.24, -0.21],
+    [-1.47, +0.35, -0.32],
+    [-1.63, +0.54, -0.54],
+    [-1.73, +1.01, -0.84],
+    ],[
+    [-1.77, +0.15, -0.14],
+    [-1.72, +0.20, -0.20],
+    [-1.81, +0.23, -0.28],
+    [-2.07, +0.45, -0.41],
+    [-2.28, +0.84, -0.64],
+    ],[
+    [-2.00, +0.13, -0.10],
+    [-2.01, +0.16, -0.16],
+    [-2.26, +0.21, -0.16],
+    [-2.49, +0.38, -0.32],
+    [-2.88, +0.75, -0.57],
+    ],[
+    [-2.22, +0.09, -0.09],
+    [-2.33, +0.15, -0.10],
+    [-2.65, +0.15, -0.15],
+    [-2.96, +0.32, -0.30],
+    [-3.45, +0.57, -0.60],
+    ],[
+    [-2.52, +0.09, -0.09],
+    [-2.68, +0.07, -0.14],
+    [-3.14, +0.12, -0.11],
+    [-3.47, +0.32, -0.35],
+    [-4.21, +0.63, -0.78],
+    ],[
+    [-2.91, +0.12, -0.05],
+    [-3.12, +0.09, -0.11],
+    [-3.69, +0.12, -0.13],
+    [-4.11, +0.41, -0.57],
+    [-5.31, +1.01, -1.64],
+    ],[
+    [-3.41, +0.13, -0.08],
+    [-3.63, +0.13, -0.11],
+    [-4.55, +0.19, -0.24],
+    [-5.12, +0.68, -1.10],
+    [-6.93, +1.61, -2.57],
+    ],[
+    [-4.11, +0.22, -0.21],
+    [-4.40, +0.15, -0.35],
+    [-5.96, +0.52, -0.32],
+    [-6.57, +1.14, -1.37],
+    [-8.83, +2.57, -5.75],
+    ],[
+    [-5.00, +0.24, -0.97],
+    [-5.96, +0.98, -1.98],
+    [-7.50, +1.30, -0.99],
+    [-8.59, +2.34, -3.23],
+    [-12.10, +4.26, -13.54]
+    ]]
+
+
+    # data=np.power(10,data)
+
+    cur_z=z.index(redshift)
+
+    n=len(M)
+    M_out = np.zeros(n)
+    E_inf = np.zeros(n)
+    E_sup = np.zeros(n)
+
+    for cur_M in range(n):
+
+        M_out[cur_M]=data[int(cur_M)][int(cur_z)][0]
+        E_inf[cur_M]=data[int(cur_M)][int(cur_z)][2]
+        E_sup[cur_M]=data[int(cur_M)][int(cur_z)][1]
+
+    return M,M_out,E_inf,E_sup
+
+def stellar_mass_function_fit():
+    """
+    from song et al 2015
+    http://arxiv.org/pdf/1507.05636v1.pdf
+
+    available redshift are : 4, 5, 6, 7, 8
+    """
+    ### zcen(binMs) => à remplacer : les centres des bins de masse (stellaire)
+    ### all song (mimi) et al (2015) fits,
+    ### z, m_norm [Msun], alpha, phi_norm [Mpc-3]
+    SMF_fits = np.array([[ 4, 10**(10.43), -1.53, 30.50e-5 ],
+                         [ 5, 10**(10.46), -1.66, 13.80e-5 ],
+                         [ 6, 10**(10.32), -1.94, 2.78e-5 ],
+                         [ 7, 10**(10.42), -2.04, 0.65e-5 ],
+                         [ 8, 10**(10.41), -2.40, 0.03e-5 ]])
+    ### apply to the fits
+    SMF_mods = np.array([ (SMF_fits[0,3]/SMF_fits[0,1])*(zcen(binMs)/SMF_fits[0,1])**SMF_fits[0,2]*np.exp(-(zcen(binMs)/SMF_fits[0,1]) )*(binMs[1:]-binMs[:-1]),
+                          (SMF_fits[1,3]/SMF_fits[1,1])*(zcen(binMs)/SMF_fits[1,1])**SMF_fits[1,2]*np.exp(-(zcen(binMs)/SMF_fits[1,1]) )*(binMs[1:]-binMs[:-1]),
+                          (SMF_fits[2,3]/SMF_fits[2,1])*(zcen(binMs)/SMF_fits[2,1])**SMF_fits[2,2]*np.exp(-(zcen(binMs)/SMF_fits[2,1]) )*(binMs[1:]-binMs[:-1]),
+                          (SMF_fits[3,3]/SMF_fits[3,1])*(zcen(binMs)/SMF_fits[3,1])**SMF_fits[3,2]*np.exp(-(zcen(binMs)/SMF_fits[3,1]) )*(binMs[1:]-binMs[:-1]),
+                          (SMF_fits[4,3]/SMF_fits[4,1])*(zcen(binMs)/SMF_fits[4,1])**SMF_fits[4,2]*np.exp(-(zcen(binMs)/SMF_fits[4,1]) )*(binMs[1:]-binMs[:-1]),
+                        ])
