@@ -52,7 +52,7 @@ def readStarburst(convert=False):
 
     return time, wavelenght, spectrum
 
-def getM1600(_x0, spectremodeleenergparsparAngstrom):
+def getM1600_old(_x0, spectremodeleenergparsparAngstrom):
     """
     Pour calculer M1600 pour un spectre modèle défini par spectremodeleenergparsparAngstrom
     et ses songeurs d’onde _x0:
@@ -93,8 +93,64 @@ def getM1600(_x0, spectremodeleenergparsparAngstrom):
     MAB1600=-2.5*np.log10(integrate.trapz(spectremodeleenergparsparAngstrom[mask],
                                           _x0[mask])/integrate.trapz(AB0pointref[mask],
                                         _x0[mask]))
-
     return MAB1600
+
+def getM1600(_x0, spectremodeleenergparsparAngstrom):
+    lmin=1500
+    lmax=1600
+    return getMagInFilter(_x0, spectremodeleenergparsparAngstrom, lmin, lmax)
+
+
+
+def getMagFilter(filter):
+    """
+    return the magnitude in a color band
+
+    filter from SDSS
+    source : http://www.cfht.hawaii.edu/Science/mswg/filters.html
+    """
+
+    if filter == "u":
+        lmean = 3540
+        dl=570./2
+    if filter == "g":
+        lmean = 4770
+        dl=1370./2
+    if filter == "r":
+        lmean = 6230
+        dl=1370./2
+    if filter == "i":
+        lmean = 7630
+        dl=1530./2
+    if filter == "z":
+        lmean = 9130
+        dl=950./2
+
+    lmin=lmean-dl
+    lmax=lmean+dl
+
+    return getMagInFilter(_x0, spectremodeleenergparsparAngstrom, lmin, lmax)
+
+
+def getMagInFilter(_x0, spectremodeleenergparsparAngstrom, lmin, lmax):
+    parsec=3.08567758e16#parsec in meter
+    c=299792458 #light speed
+
+    F0 = 3631 #Jy reference flow
+    Jyhzcm=1.e-23 #  erg s-1 Hz-1 cm-2
+    Jyhzm=1.e-19 # erg s-1 Hz-1 m-2
+    #so for absolute mags the 0 point is Jyhzm * 4pir^2 where r = 10 pc
+
+    AB0pointabs=F0*Jyhzm*4.*np.pi*(10.*parsec)**2; # erg/s/Hz // cause ParSec
+
+    AB0pointref=AB0pointabs*(c*1.e10/((_x0)**2)); # in erg/s/A (thats why we have to put c in Angstrom/s)
+
+    mask = np.where( (_x0>=lmin) & (_x0<=lmax))#le filtre vaut 1 entre 1500 et 1600 Angstrom
+
+    mag=-2.5*np.log10(integrate.trapz(spectremodeleenergparsparAngstrom[mask],
+                                          _x0[mask])/integrate.trapz(AB0pointref[mask],
+                                          _x0[mask]))
+    return mag
 
 def getModel():
     age, wavelength, spectre = readStarburst()

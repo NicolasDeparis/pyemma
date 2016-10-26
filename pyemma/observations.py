@@ -16,9 +16,9 @@ def sfr1():
     [5.9, 	-1.80,	0.06, 0.06,	-1.55, 	0.06,	0.06],
     [6.8,  	-1.92,	0.06, 0.06,	-1.69, 	0.06,	0.06],
     [7.9,  	-2.23,	0.07, 0.06,	-2.08, 	0.07,	0.07],
-#     [10.4, 	-3.28,	0.36, 0.45, -3.13,	0.36,	0.45]
-        ]
-              )
+    [10.4, 	-3.28,	0.36, 0.45, -3.13,	0.36,	0.45],
+    # [10.5, 	-2.5,	0.5, 1. , -2.5,	0.5,	0.5]
+    ])
 
 
     x=z[:,0]
@@ -205,9 +205,13 @@ def xion():
     y=z[:,1]
 
     yerror = [-z[:,3], z[:,2]]
-    plt.errorbar(x, 1.-y, xerr=None, yerr=yerror, ls='none', fmt='ko', label="Fan 2006")
+
+    return x, 1.-y, None, yerror
+
+    # plt.errorbar(x, 1.-y, xerr=None, yerr=yerror, ls='none', fmt='ko', label="Fan 2006")
 
 
+    """
 
     ### pour les limites
     taille_erreur = 0.2 ### taille de la fleche, en dex
@@ -231,7 +235,7 @@ def xion():
     yerror3 = [ z3[:,2], (1-z3[:,1])*(10**(taille_erreur)-1) ] ### (1-z3[:,1])*(10**(taille_erreur)-1) => pour que toute les fleche est la même taille
     plt.errorbar(x3, 1.-y3, xerr=None, yerr=yerror3, ls='none', fmt='ko', lolims=True )
 
-
+    """
 
 
     """
@@ -446,7 +450,6 @@ def stellar_mass_function(redshift):
     """
     from song et al 2015
     http://arxiv.org/pdf/1507.05636v1.pdf
-
     available redshift are : 4, 5, 6, 7, 8
     """
 

@@ -7,6 +7,7 @@ import h5py
 import fof
 # import hop
 import optical_depth
+import movie
 
 class Run:
     """
@@ -16,6 +17,7 @@ class Run:
     """
 
     def __init__(self,folder):
+
         self.folder=folder
         self._data_folder=folder+"data/"
         self.step_list=[]
@@ -33,7 +35,14 @@ class Run:
             setattr(self,key,val)
 
             self.step_list.append(val)
+
         self.param=Param(self.folder)
+
+        try:
+            self.movie=movie.Movie("%sdata/movie/"%self.folder)
+        except FileNotFoundError:
+            print('no movie')
+            pass
 
 class Step:
     def __init__(self,number,folder):
@@ -50,13 +59,21 @@ class Step:
 
         self.optical_depth=optical_depth.OpticalDepth() #Optical depth
 
-        self.a=self.grid._get_a() # scale factor
+        # scale factor
+        self.a=self.grid._get_a()
+        if self.a == None:
+            self.a=self.part._get_a()
+
+        self.t=self.grid._get_t()
+        if self.t == None:
+            self.t=self.part._get_t()
+
         self.z=1./self.a -1 # redshift
 
 
 #comment these line in case of probleme with halo finder
 #       self.hop=hop.Hop(number,folder)
-        self.fof=fof.Fof(folder,number)
+        self.fof=fof.Fof(folder,number,self)
 
 class Fields:
     def __init__(self, number,folder, sets_type):
@@ -87,6 +104,14 @@ class Fields:
         for i in self.__dict__ :
             if self.__dict__[i].__class__.__name__ == "Field":
                 return self.__dict__[i]._get_a()
+
+    def _get_t(self,force=0):
+        """
+        get the scale factor.
+        """
+        for i in self.__dict__ :
+            if self.__dict__[i].__class__.__name__ == "Field":
+                return self.__dict__[i]._get_t()
 
 class Field():
     """
@@ -133,6 +158,16 @@ class Field():
         """
         f = h5py.File(self._filename, "r")
         return f.attrs['a']
+
+    def _get_t(self):
+        """
+        read the physical time
+        """
+        try:
+            f = h5py.File(self._filename, "r")
+            return f.attrs['t']
+        except KeyError:
+            return 0
 
     def _read1proc(self,filename):
         with open(filename, "rb") as file:

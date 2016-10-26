@@ -7,7 +7,7 @@ import os
 from scipy import spatial
 
 class Fof:
-    def __init__(self,folder,stepnum):
+    def __init__(self,folder,stepnum,step):
         self.exec_folder = "/home/deparis/Emma/utils/pfof/"
 
         self.folder=folder
@@ -16,6 +16,7 @@ class Fof:
 
         self._isLoaded_masst = False
         self._isLoaded_struct = False
+        self.step=step
 
     def __getattr__(self, name):
 
@@ -86,8 +87,13 @@ class Fof:
         elif name == 'inertia_eig_val':
             self.get_inertia_tensor()
             return self.__getattribute__(name)
+
         elif name == 'inertia_eig_vec':
             self.get_inertia_tensor()
+            return self.__getattribute__(name)
+
+        elif name == 'part_mass':
+            self.get_part_mass()
             return self.__getattribute__(name)
 
         elif name == 'part_mass_fine':
@@ -98,20 +104,33 @@ class Fof:
             self.get_getStars()
             return self.__getattribute__(name)
 
+        elif name == 'cells':
+            self.get_cells()
+            return self.__getattribute__(name)
+
+        elif name == 'cells_fine':
+            self.get_cells_fine()
+            return self.__getattribute__(name)
+
+        elif name == 'gas_mass_fine':
+            self.get_gas_mass_fine()
+            return self.__getattribute__(name)
+
+        elif name == 'star_mass_fine':
+            self.get_star_mass_fine()
+            return self.__getattribute__(name)
+
+        elif name == 'instant_SFR_from_gas':
+            self.get_instant_SFR_from_gas()
+            return self.__getattribute__(name)
+
+
 
 
         else:
             print("ERROR : Can't automatically determine %s"%name)
             raise AttributeError
             return
-
-#         if name == 'cells':
-#             print("ERROR : call get_cells() first")
-#             return
-
-#         if name == 'cells_fine':
-#             print("ERROR : call get_cells_fine() first")
-#             return
 
     def write_infosim(self):
         self.getLmin()
@@ -140,7 +159,19 @@ class Fof:
             f.write(".false. !lire depuis cube\n")
             f.write(".true. !timings\n")
 
-    def gen(self,nproc_fof):
+    def gen(self,nproc_fof, force=0):
+
+        folder_name ="%s%05d/halo/"%(self.folder, self.stepnum)
+
+        if not force:
+            try:
+                files=os.listdir(folder_name)
+                for f in files:
+                    if "halo_masst" in f:
+                        print("fof already exist")
+                        return 0
+            except OSError:
+                pass
 
         self.ncpu = nproc_fof
         self.write_fofin()
@@ -151,7 +182,6 @@ class Fof:
         curdir=os.getcwd()
         os.chdir(self.exec_folder)
 
-        folder_name ="%s%05d/halo/"%(self.folder, self.stepnum)
         try :
             os.mkdir(folder_name)
         except OSError:
@@ -168,8 +198,9 @@ class Fof:
         count the number of halo_masst* files in path
         """
         try:
-            self.ncpu=0
+
             files=os.listdir(self.path)
+            self.ncpu=0
             for f in files:
                 if "halo_masst" in f:
                     self.ncpu+=1
@@ -178,7 +209,7 @@ class Fof:
 
     def getNproc_sim(self):
         """
-        Find coarse level by reading param.run
+        return the number of cpu used by the simulation by reading param.run
         """
         from pyemma import io
         info = io.Info(self.folder+"../")
@@ -430,11 +461,11 @@ class Fof:
         with open(name, 'wb') as output:
             pickle.dump(self.R200, output,-1)
 
-    def get_star(self,star, force=0):
-        self._get_Part(star,"stars",force=force)
+    def get_star(self, force=0):
+        self._get_Part(self.step.star,"stars",force=force)
 
-    def get_part(self,part, force=0):
-        self._get_Part(part,"part", force=force)
+    def get_part(self, force=0):
+        self._get_Part(self.step.part,"part", force=force)
 
     def _get_Part(self,part, type,force=0):
         """
@@ -489,11 +520,12 @@ class Fof:
 
         setattr(self,type,part)
 
-    def get_stars_radius(self,stars):
+    def get_stars_radius(self):
         """
         get distance of all stars in halo compare to the center of the halo
         """
 
+        stars=self.step.stars
         self.stars_radius=np.zeros(self.nfoftot,dtype=np.object)
 
         for i in range(self.nfoftot):
@@ -506,11 +538,12 @@ class Fof:
                 self.stars_radius[i]=np.sqrt(np.power(dx,2)+np.power(dy,2)+np.power(dz,2))
 
 
-    def get_star_fine(self,grid, stars, force=0):
+    def get_star_fine(self,force=0):
         """
         get halo stars the fine way
         """
-
+        grid=self.step.grid
+        stars=self.step.stars
         name = self.path+"stars_fine"
         if os.path.isfile(name) and not force:
             print("Reading %s"%name)
@@ -571,11 +604,12 @@ class Fof:
                 if youngest_stars <= age_max:
                     self.getYoungStars[i] = True
 
-    def get_cells(self,grid, force=0):
+    def get_cells(self,force=0,fact=1.):
         """
         get grid cells in R200
         """
 
+        grid=self.step.grid
         name = self.path+"cells"
         if os.path.isfile(name) and not force:
             print("Reading %s"%name)
@@ -598,9 +632,8 @@ class Fof:
             yc=self.y[halo_num]
             zc=self.z[halo_num]
             r=self.R200[halo_num]
-            self.cells[halo_num]=tree.query_ball_point((xc,yc,zc), r)
-
-            # Boundary conditions
+            self.cells[halo_num]=tree.query_ball_point((xc,yc,zc), fact*r)
+# Boundary conditions
 #             if xc-r<0:
 #                 self.cells[halo_num].append(tree.query_ball_point((xc+1,yc,zc), r))
 #             if xc+r>1:
@@ -617,10 +650,11 @@ class Fof:
         with open(name, 'wb') as output:
             pickle.dump(self.cells, output,-1)
 
-    def get_cells_fine(self,grid, force=0):
+    def get_cells_fine(self,force=0):
         """
         get grid cells of halo by associating each part to the nearest cell
         """
+        grid=self.step.grid
 
         name = self.path+"cells_fine"
         if os.path.isfile(name) and not force:
@@ -654,11 +688,11 @@ class Fof:
 # Mass
 ####################################################################################################################
 
-    def get_star_mass(self,star):
-        self._get_Part_mass(star, type="star_mass")
+    def get_star_mass(self):
+        self._get_Part_mass(self.step.star, type="star_mass")
 
-    def get_part_mass(self,part):
-        self._get_Part_mass(part, type="part_mass")
+    def get_part_mass(self):
+        self._get_Part_mass(self.step.part, type="part_mass")
 
     def _get_Part_mass(self,part,type):
         """
@@ -676,10 +710,11 @@ class Fof:
             setattr(self,type,part_mass)
 
         if type == "part_mass":
-            partID = self.part
+            partID = self.part_id
             part_mass=np.zeros(self.nfoftot)
+
+            unit_mass=2**(-3*self.lmin)
             for i in range(self.nfoftot):
-                unit_mass=np.power(128.,-3)*(info.om)
                 part_mass[i]=unit_mass*len(partID[i])
             part_mass = part_mass/1.9891e30*info.unit_mass
             setattr(self,type,part_mass)
@@ -695,10 +730,13 @@ class Fof:
         self.part_mass_fine=self.npart*part_mass
         self.part_mass_fine=self.part_mass_fine/1.9891e30*self.unit_mass
 
-    def get_star_mass_fine(self,star):
+    def get_star_mass_fine(self):
         """
         get halo star mass in Mo
         """
+
+        star=self.step.star
+
         from pyemma import io
         info = io.Info(self.path+"../../../")
 
@@ -708,11 +746,12 @@ class Fof:
             self.star_mass_fine[i]=np.sum(star.mass.data[stars])
         self.star_mass_fine = self.star_mass_fine/1.9891e30*info.unit_mass
 
-    def get_gas_mass(self,grid):
+    def get_gas_mass(self):
         """
         get halo gas mass in Mo in R200
         """
 
+        grid=self.step.grid
         from pyemma import io
         info = io.Info(self.path+"../../../")
 
@@ -725,10 +764,14 @@ class Fof:
 
         self.gas_mass = self.gas_mass/1.9891e30*info.unit_mass
 
-    def get_gas_mass_fine(self,grid, info):
+    def get_gas_mass_fine(self):
         """
         get halo gas mass in Mo in fine methode
         """
+
+        grid=self.step.grid
+        from pyemma import io
+        info = io.Info(self.path+"../../../")
 
         self.gas_mass_fine=np.zeros(self.nfoftot)
         for halo_num in range(self.nfoftot):
@@ -769,8 +812,9 @@ class Fof:
         luminosity.get_all_flux_1600(cur_step.star,t,info.unit_mass)
         flux = cur_step.star.flux_1600
 
-        print("WARNING applying escape fraction of 0.35")
-        flux *= 0.35
+        fesc = 0.18
+        print("WARNING applying escape fraction of %f"%fesc)
+        flux *= fesc
 
         flux_tot=np.zeros(self.nfoftot)
         for i in range(self.nfoftot):
@@ -791,8 +835,9 @@ class Fof:
 
         for i in range(self.nfoftot):
             if self.getStars[i]:
-                dt = (self.R200[i] - self.stars_radius[i]) *cur_step.a*info.unit_l /(run.clight*299792458) /(365*24*3600)
+                # dt = (self.R200[i] - self.stars_radius[i]) *cur_step.a*info.unit_l /(run.clight*299792458) /(365*24*3600)
                 # dt = self.R200[i] *cur_step.a *info.unit_l /(run.clight*299792458) /(365*24*3600) # yr
+                dt=0
                 self.ageLuminosity[i]= t -cur_step.star.age.data[self.stars[i]] -dt # yr
 
     def get_luminosity_UV(self,cur_step):
@@ -852,9 +897,13 @@ class Fof:
 
         self.mean_vel = np.empty(self.nfoftot, dtype=np.object)
         for halo_num in range(self.nfoftot):
-            vx=np.mean(self.part_vel[halo_num][0::3])
-            vy=np.mean(self.part_vel[halo_num][1::3])
-            vz=np.mean(self.part_vel[halo_num][2::3])
+            # vx=np.mean(self.part_vel[halo_num][0::3])
+            # vy=np.mean(self.part_vel[halo_num][1::3])
+            # vz=np.mean(self.part_vel[halo_num][2::3])
+
+            vx=np.mean(self.step.part_fin.vx.data[self.part_id[halo_num]])
+            vy=np.mean(self.step.part.vy.data[self.part_id[halo_num]])
+            vz=np.mean(self.step.part.vz.data[self.part_id[halo_num]])
 
             self.mean_vel[halo_num] = [vx,vy,vz]
 
@@ -980,14 +1029,14 @@ class Fof:
 # FLUX AT R200
 ####################################################################################################################
 
-    def get_flux_r200(self,grid, type, fact=1, force=0, getonly=0):
+    def get_flux_r200(self,type,fact=1,force=0,getonly=0):
         """
         type could be : hydro, rad, ref
 
         #read mean vel
         #get_cells
         """
-
+        grid=self.step.grid
         name = self.path+"flux_r200_%s"%type
         fact_name = ("%0.2f"%(fact)).replace(".","_")
         if os.path.isfile(name) and not force:
@@ -1007,8 +1056,25 @@ class Fof:
         tot_flux = np.zeros(self.nfoftot)
         flux_data=np.empty(self.nfoftot, dtype=np.object)
 
+        # self.cos = np.zeros(self.nfoftot, dtype=np.object)
+        # self.norm = np.zeros(self.nfoftot, dtype=np.object)
+        # self.cosstd = np.zeros(self.nfoftot)
+        # self.cosmean = np.zeros(self.nfoftot)
+
+
+        #get the center of cells
+        l=grid.l.data
+        dx=np.power(0.5,l+1)
+        x=grid.x.data+dx
+        y=grid.y.data+dx
+        z=grid.z.data+dx
+
+        tree = spatial.cKDTree( np.transpose( [x,y,z] ))
+
+
         skipped = 0
         for halo_num in range(self.nfoftot):
+        # for halo_num in range(100):
             if not halo_num%(1000):
                 print(halo_num)
 
@@ -1017,68 +1083,101 @@ class Fof:
             yc =self.y[halo_num]
             zc =self.z[halo_num]
             R200=self.R200[halo_num]
-            cells = self.cells[halo_num]
-
-            # skip halo smaller than ncells_min
-            ncells_min = 2
-            if (len(cells)<ncells_min):
-                skipped +=1
-                continue
-
-            # skip halo smaller than ncells_min
-            # l_min = 11
-            # if (np.min(grid.l.data[cells])<l_min):
+            # cells = self.cells[halo_num]
+            #
+            # # skip halo smaller than ncells_min
+            # ncells_min = 2
+            # if (len(cells)<ncells_min):
             #     skipped +=1
             #     continue
-
-            # skip boundary conditions
-            if (xc+R200 >1.) | (xc-R200 <0.) | \
-               (yc+R200 >1.) | (yc-R200 <0.) | \
-               (zc+R200 >1.) | (zc-R200 <0.):
-                skipped +=1
-                continue
-
-            # get cell size
-            l_grid = grid.l.data[cells]
-            dx = np.power(0.5,l_grid)
-
-            # get halo cells, set cell-centred coordinate, center on the halo
-            x_grid = (grid.x.data[cells] +dx/2. -xc)
-            y_grid = (grid.y.data[cells] +dx/2. -yc)
-            z_grid = (grid.z.data[cells] +dx/2. -zc)
+            #
+            # # l_min = 11
+            # # if (np.min(grid.l.data[cells])<l_min):
+            # #     skipped +=1
+            # #     continue
+            #
+            # # skip boundary conditions
+            # if (xc+R200 >1.) | (xc-R200 <0.) | \
+            #    (yc+R200 >1.) | (yc-R200 <0.) | \
+            #    (zc+R200 >1.) | (zc-R200 <0.):
+            #     skipped +=1
+            #     continue
+            #
+            # # get cell size
+            # l_grid = grid.l.data[cells]
+            # dx = np.power(0.5,l_grid)
+            #
+            # # get halo cells, set cell-centred coordinate, center on the halo
+            # x_grid = (grid.x.data[cells] +dx/2. -xc)
+            # y_grid = (grid.y.data[cells] +dx/2. -yc)
+            # z_grid = (grid.z.data[cells] +dx/2. -zc)
 
             #gen tree
-            tree = spatial.cKDTree(np.transpose((x_grid,y_grid,z_grid)))
+            # tree = spatial.cKDTree(np.transpose((x_grid,y_grid,z_grid)))
 
             #get the cell nearest neighbourg of each healpix point
-            idx = tree.query(np.transpose((x_healpix*fact*R200,y_healpix*fact*R200,z_healpix*fact*R200)))[1]
+            xp=xc+x_healpix*fact*R200
+            yp=yc+y_healpix*fact*R200
+            zp=zc+z_healpix*fact*R200
+            idx = tree.query(np.transpose((xp,yp,zp)))[1]
 
             # Select the flux
             if type == "hydro":
                 # hydro flux
-                fx=grid.field_d.data[cells]*(grid.field_u.data[cells]-self.mean_vel[halo_num][0])
-                fy=grid.field_d.data[cells]*(grid.field_v.data[cells]-self.mean_vel[halo_num][1])
-                fz=grid.field_d.data[cells]*(grid.field_w.data[cells]-self.mean_vel[halo_num][2])
+                # fx=grid.field_d.data[cells]*(grid.field_u.data[cells]-self.mean_vel[halo_num][0])
+                # fy=grid.field_d.data[cells]*(grid.field_v.data[cells]-self.mean_vel[halo_num][1])
+                # fz=grid.field_d.data[cells]*(grid.field_w.data[cells]-self.mean_vel[halo_num][2])
 
-            if type == "rad":
-                # radiative flux
-                fx=grid.rfield_fx0.data[cells]
-                fy=grid.rfield_fy0.data[cells]
-                fz=grid.rfield_fz0.data[cells]
+                fx=grid.field_d.data[idx]*(grid.field_u.data[idx]-self.mean_vel[halo_num][0])
+                fy=grid.field_d.data[idx]*(grid.field_v.data[idx]-self.mean_vel[halo_num][1])
+                fz=grid.field_d.data[idx]*(grid.field_w.data[idx]-self.mean_vel[halo_num][2])
 
-            if type == "ref":
-                #reference flux
-                fx=np.ones(len(cells))*3
-                fy=np.zeros(len(cells))
-                fz=np.zeros(len(cells))
+
+            if type == "speed":
+                # hydro flux
+                # fx=grid.field_u.data[cells]-self.mean_vel[halo_num][0]
+                # fy=grid.field_v.data[cells]-self.mean_vel[halo_num][1]
+                # fz=grid.field_w.data[cells]-self.mean_vel[halo_num][2]
+
+                fx=grid.field_u.data[idx]-self.mean_vel[halo_num][0]
+                fy=grid.field_v.data[idx]-self.mean_vel[halo_num][1]
+                fz=grid.field_w.data[idx]-self.mean_vel[halo_num][2]
+
+
+            # if type == "rad":
+            #     # radiative flux
+            #     fx=grid.rfield_fx0.data[cells]
+            #     fy=grid.rfield_fy0.data[cells]
+            #     fz=grid.rfield_fz0.data[cells]
+            #
+            # if type == "ref":
+            #     #reference flux
+            #     fx=np.ones(len(cells))*3
+            #     fy=np.zeros(len(cells))
+            #     fz=np.zeros(len(cells))
 
             #surface element
             ds= 4*np.pi*(fact*R200)**2 / n_healpix
 
+            if type == "speed":
+                ds= 1. / n_healpix
+
             # scalar product
-            flux_data[halo_num]=(x_healpix*fx[idx] +
-                                 y_healpix*fy[idx] +
-                                 z_healpix*fz[idx] ) * ds
+            # flux_data[halo_num]=(x_healpix*fx[idx] +
+            #                      y_healpix*fy[idx] +
+            #                      z_healpix*fz[idx] ) * ds
+
+            flux_data[halo_num]=(x_healpix*fx +
+                                 y_healpix*fy +
+                                 z_healpix*fz ) * ds
+
+
+            # self.norm[halo_num]=np.sqrt( np.power(fx[idx],2) + np.power(fy[idx],2) + np.power(fz[idx],2) )
+
+            # self.cos[halo_num]= flux_data[halo_num] / self.norm[halo_num]
+            #
+            # self.cosmean[halo_num]=np.mean(self.cos[halo_num])
+            # self.cosstd[halo_num]=np.std(self.cos[halo_num])
 
             #consider only outflow
             if getonly >0:
@@ -1090,6 +1189,7 @@ class Fof:
 
             # tot flux
             tot_flux[halo_num]=np.sum(flux_data[halo_num])
+            # tot_flux[halo_num]=np.max(flux_data[halo_num])
 
         print("skipped %d/%d = %.02f %%"%(skipped,self.nfoftot, skipped/self.nfoftot*100))
 
@@ -1104,11 +1204,17 @@ class Fof:
 
 ####################################################################################################################
 ####################################################################################################################
-    def get_instant_SFR(self,stars):
+    def get_instant_SFR(self):
+
+        stars=self.step.stars
         from pyemma import io, time
         info = io.Info(self.path+"../../../")
 
-        t=time.a2t_quad(stars.age.tsim, info.om, info.H0)
+        # t=time.a2t_quad(np.max(stars.age.data), info.om, info.H0)
+        # print(np.max(stars.age.data))
+        t=np.max(stars.age.data)
+        # t=time.a2t_romberg(np.max(stars.age.data), info)
+
 
         self.instant_sfr=np.zeros(self.nfoftot)
         for halo_num in range(self.nfoftot):
@@ -1119,28 +1225,39 @@ class Fof:
             self.instant_sfr[halo_num]*=info.unit_mass/1.9891e30
             self.instant_sfr[halo_num]/=thresh
 
-    def get_instant_SFR_from_gas(self,step,param):
+    def get_instant_SFR_from_gas(self):
         """
         compute theorical instant SFR using e*rho/tff
         need cells
         """
 
-        rho=step.grid.field_d.data *param.info.unit_mass /  np.power(step.a *param.info.unit_l,3, dtype=np.float128)
+        step=self.step
+
+        from pyemma import io, time
+        info = io.Info(self.path+"../../../")
+        run = io.RunParam(self.path+"../../../")
+
+        rho=step.grid.field_d.data *info.unit_mass /  np.power(step.a *info.unit_l,3, dtype=np.float128) # kg.m-3
 
         n_halo = self.nfoftot
         self.instant_SFR_from_gas = np.zeros(n_halo)
         for ihalo in range(n_halo):
 
-
             if len(self.cells[ihalo])>0:
-                dx=np.power(0.5,step.grid.l.data[self.cells[ihalo]]) *param.info.box_size_hm1_Mpc *step.a *param.info.unit_l
-                dv=np.power(dx,3, dtype=np.float128)
+                dx=np.power(0.5,step.grid.l.data[self.cells[ihalo]]) *step.a *info.unit_l # m
+                dv=np.power(dx,3, dtype=np.float128) # m3
 
                 rho_halo=rho[self.cells[ihalo]] # kg.m-3
                 tff=np.sqrt(3*np.pi/(32*6.67384e-11*rho_halo)) # s
 
-                self.instant_SFR_from_gas[ihalo] = np.mean(param.run.efficiency*rho_halo/tff * dv)  # kg.s-1
-                self.instant_SFR_from_gas[ihalo]*= 1./2e30 *(365*24*3600) # Mo.yr-1
+                mask = rho_halo>run.overdensity_cond *info.unit_mass /  np.power(step.a *info.unit_l,3, dtype=np.float128)
+
+                sfr_all = run.efficiency*rho_halo/tff *dv
+
+                sfr = np.sum( sfr_all[mask] ) # kg.s-1
+                sfr *= 1./1.9891e30 *(365*24*3600) # Mo.yr-1
+
+                self.instant_SFR_from_gas[ihalo]=sfr
 
     def get_time_newest_star(self, stars):
         self.time_newest_star=np.zeros(self.nfoftot)
