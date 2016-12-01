@@ -553,3 +553,43 @@ def stellar_mass_function_fit():
                           (SMF_fits[3,3]/SMF_fits[3,1])*(zcen(binMs)/SMF_fits[3,1])**SMF_fits[3,2]*np.exp(-(zcen(binMs)/SMF_fits[3,1]) )*(binMs[1:]-binMs[:-1]),
                           (SMF_fits[4,3]/SMF_fits[4,1])*(zcen(binMs)/SMF_fits[4,1])**SMF_fits[4,2]*np.exp(-(zcen(binMs)/SMF_fits[4,1]) )*(binMs[1:]-binMs[:-1]),
                         ])
+
+
+
+def ionization_rate_gamma():
+    """
+    Observations of Gamma the photo-ionization rate.
+    The observation are not well calibrate to each other (see Becker & Bolton 13 Figure.11)
+    but the difference is small
+    """
+    ### Becker & Bolton 13
+    obs_gamma = np.array( [ [ 2.40, 2.80, 3.20, 3.60, 4.00, 4.40, 4.75 ],
+                           [ 0.015, -0.066, -0.103, -0.097, -0.072, -0.019, -0.029 ],
+                           [ -0.146, -0.131, -0.121, -0.118, -0.117, -0.122, -0.147 ],
+                           [ 0.132, 0.129, 0.130, 0.131, 0.135, 0.140, 0.156 ]] )
+    ### Calverley 11
+    obs_gamma2 = np.array( [ [ 5, 6 ],
+                             [ -0.15, -0.84 ],
+                             [ -0.16, -0.18 ],
+                             [  0.16, 0.18 ]] )
+    ### Wyithe and Bolton 11
+    obs_gamma3 = np.array( [ [ 5, 6 ],
+                             [ np.log10(0.47), np.log10(0.18) ],
+                             [ -0.2, -0.09 ],
+                             [ 0.3, 0.18 ]] )
+
+    plt.plot( obs_gamma[0], 10**obs_gamma[1], 'ok')
+    plt.errorbar( obs_gamma[0], 10**obs_gamma[1],
+                 yerr=[10**obs_gamma[1] - 10**(obs_gamma[1]+obs_gamma[2]),
+                       10**(obs_gamma[1]+obs_gamma[3]) - 10**obs_gamma[1] ],
+                fmt='none', ecolor='k' )
+    plt.plot( obs_gamma2[0]-0.02, 10**obs_gamma2[1], 'or')
+    plt.errorbar( obs_gamma2[0]-0.02, 10**obs_gamma2[1],
+                 yerr=[10**obs_gamma2[1] - 10**(obs_gamma2[1]+obs_gamma2[2]),
+                       10**(obs_gamma2[1]+obs_gamma2[3]) - 10**obs_gamma2[1] ],
+                fmt='none', ecolor='r' )
+    plt.plot( obs_gamma3[0]+0.02, 10**obs_gamma3[1], 'ob')
+    plt.errorbar( obs_gamma3[0]+0.02, 10**obs_gamma3[1],
+                 yerr=[10**obs_gamma3[1] - 10**(obs_gamma3[1]+obs_gamma3[2]),
+                       10**(obs_gamma3[1]+obs_gamma3[3]) - 10**obs_gamma3[1] ],
+                fmt='none', ecolor='b' )

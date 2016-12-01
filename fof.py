@@ -21,111 +21,164 @@ class Fof:
     def __getattr__(self, name):
 
         if name == 'R200':
+            print("Getting %s"%name)
             self.get_R200()
             return self.__getattribute__(name)
 
         elif name == 'lmin':
+            print("Getting %s"%name)
             self.getLmin()
             return self.__getattribute__(name)
 
         elif name == 'ob':
+            print("Getting %s"%name)
             self.getCosmo()
             return self.__getattribute__(name)
 
         elif name == 'om':
+            print("Getting %s"%name)
             self.getCosmo()
             return self.__getattribute__(name)
 
         elif name == 'nfoftot':
+            print("Getting %s"%name)
             self.getNfofTot()
             return self.__getattribute__(name)
 
         elif name == 'x':
+            print("Getting %s"%name)
             self.read_masst()
             return self.__getattribute__(name)
 
         elif name == 'y':
+            print("Getting %s"%name)
             self.read_masst()
             return self.__getattribute__(name)
 
         elif name == 'z':
+            print("Getting %s"%name)
             self.read_masst()
             return self.__getattribute__(name)
 
         elif name == 'idx':
+            print("Getting %s"%name)
             self.read_masst()
             return self.__getattribute__(name)
 
         elif name == 'npart':
+            print("Getting %s"%name)
             self.read_masst()
             return self.__getattribute__(name)
 
         elif name == 'part_n':
+            print("Getting %s"%name)
             self.read_masst()
             return self.__getattribute__(name)
 
         elif name == 'part_pos':
+            print("Getting %s"%name)
             self.read_struct()
             return self.__getattribute__(name)
 
         elif name == 'part_vel':
+            print("Getting %s"%name)
             self.read_struct()
             return self.__getattribute__(name)
 
         elif name == 'part_id':
+            print("Getting %s"%name)
             self.read_struct()
             return self.__getattribute__(name)
 
         elif name == 'nproc_sim':
+            print("Getting %s"%name)
             self.getNproc_sim()
             return self.__getattribute__(name)
 
         elif name == 'ncpu':
+            print("Getting %s"%name)
             self.getNcpu()
             return self.__getattribute__(name)
 
         elif name == 'inertia_eig_val':
+            print("Getting %s"%name)
             self.get_inertia_tensor()
             return self.__getattribute__(name)
 
         elif name == 'inertia_eig_vec':
+            print("Getting %s"%name)
             self.get_inertia_tensor()
             return self.__getattribute__(name)
 
         elif name == 'part_mass':
+            print("Getting %s"%name)
             self.get_part_mass()
             return self.__getattribute__(name)
 
         elif name == 'part_mass_fine':
+            print("Getting %s"%name)
             self.get_part_mass_fine()
             return self.__getattribute__(name)
 
         elif name == 'getStars':
+            print("Getting %s"%name)
             self.get_getStars()
             return self.__getattribute__(name)
 
+        elif name == 'stars':
+            print("Getting %s"%name)
+            self.get_stars()
+            return self.__getattribute__(name)
+
+        elif name == 'stars_fine':
+            print("Getting %s"%name)
+            self.get_stars_fine()
+            return self.__getattribute__(name)
+
+        elif name == 'part':
+            print("Getting %s"%name)
+            self.get_part()
+            return self.__getattribute__(name)
+
         elif name == 'cells':
+            print("Getting %s"%name)
             self.get_cells()
             return self.__getattribute__(name)
 
         elif name == 'cells_fine':
+            print("Getting %s"%name)
             self.get_cells_fine()
             return self.__getattribute__(name)
 
+        elif name == 'gas_mass':
+            print("Getting %s"%name)
+            self.get_gas_mass()
+            return self.__getattribute__(name)
+
         elif name == 'gas_mass_fine':
+            print("Getting %s"%name)
             self.get_gas_mass_fine()
             return self.__getattribute__(name)
 
+        elif name == 'star_mass':
+            print("Getting %s"%name)
+            self.get_star_mass()
+            return self.__getattribute__(name)
+
         elif name == 'star_mass_fine':
+            print("Getting %s"%name)
             self.get_star_mass_fine()
             return self.__getattribute__(name)
 
-        elif name == 'instant_SFR_from_gas':
-            self.get_instant_SFR_from_gas()
+        elif name == 'instant_SFR':
+            print("Getting %s"%name)
+            self.get_instant_SFR()
             return self.__getattribute__(name)
 
-
-
+        elif name == 'instant_SFR_from_gas':
+            print("Getting %s"%name)
+            self.get_instant_SFR_from_gas()
+            return self.__getattribute__(name)
 
         else:
             print("ERROR : Can't automatically determine %s"%name)
@@ -461,7 +514,7 @@ class Fof:
         with open(name, 'wb') as output:
             pickle.dump(self.R200, output,-1)
 
-    def get_star(self, force=0):
+    def get_stars(self, force=0):
         self._get_Part(self.step.star,"stars",force=force)
 
     def get_part(self, force=0):
@@ -472,6 +525,7 @@ class Fof:
         get part in R200
         """
 
+        force=1
         name = self.path+type
         if os.path.isfile(name) and not force:
             with open(name, 'rb') as input:
@@ -479,9 +533,12 @@ class Fof:
                 setattr(self,type,pickle.load(input))
             return
 
-        x=part.x.data
-        y=part.y.data
-        z=part.z.data
+        try :
+            x=part.x.data
+            y=part.y.data
+            z=part.z.data
+        except AttributeError:
+            return
 
         tree = spatial.cKDTree( np.transpose( [x,y,z] ))
 
@@ -494,26 +551,28 @@ class Fof:
             z=self.z[i]
             r=self.R200[i]
 
+
             part[i]=tree.query_ball_point((x,y,z), r)
 
-            # Boundary conditions
-#             bound=[]
-#             if x-r<0:
-#                 bound.append(tree.query_ball_point((x+1,y,z), r))
-#             if x+r>1:
-#                 bound.append(tree.query_ball_point((x-1,y,z), r))
-#             if y-r<0:
-#                 bound.append(tree.query_ball_point((x,y+1,z), r))
-#             if y+r>1:
-#                 bound.append(tree.query_ball_point((x,y-1,z), r))
-#             if z-r<0:
-#                 bound.append(tree.query_ball_point((x,y,z+1), r))
-#             if z+r>1:
-#                 bound.append(tree.query_ball_point((x,y,z-1), r))
 
-#                 if len(bound):
-#                     print(bound)
-#                     part[i].append(bound)
+            # Boundary conditions
+            # bound=[]
+            # if x-r<0:
+            #     bound.append(tree.query_ball_point((x+1.,y,z), r))
+            # if x+r>1:
+            #     bound.append(tree.query_ball_point((x-1.,y,z), r))
+            # if y-r<0:
+            #     bound.append(tree.query_ball_point((x,y+1.,z), r))
+            # if y+r>1:
+            #     bound.append(tree.query_ball_point((x,y-1.,z), r))
+            # if z-r<0:
+            #     bound.append(tree.query_ball_point((x,y,z+1.), r))
+            # if z+r>1:
+            #     bound.append(tree.query_ball_point((x,y,z-1.), r))
+            #
+            #     if len(bound):
+            #         print(bound)
+            #         part[i].append(bound)
 
         with open(name, 'wb') as output:
             pickle.dump(part, output,-1)
@@ -537,13 +596,54 @@ class Fof:
 
                 self.stars_radius[i]=np.sqrt(np.power(dx,2)+np.power(dy,2)+np.power(dz,2))
 
+        # def get_part_fine(self,force=0):
+        #     """
+        #     get halo stars the fine way
+        #     """
+        #     grid=self.step.grid
+        #     stars=self.step.part
+        #     name = self.path+"part_fine"
+        #     if os.path.isfile(name) and not force:
+        #         print("Reading %s"%name)
+        #         with open(name, 'rb') as input:
+        #             self.stars_fine = pickle.load(input)
+        #         return
+        #
+        #     x=stars.x.data
+        #     y=stars.y.data
+        #     z=stars.z.data
+        #     tree = spatial.cKDTree( np.transpose( [x,y,z] ))
+        #
+        # self.stars_fine=np.empty(self.nfoftot, dtype=np.object)
+        # for i in range(self.nfoftot):
+        #     cells = self.cells_fine[i]
+        #
+        #     l=grid.l.data[cells]
+        #
+        #     dx=np.power(0.5,l)
+        #
+        #     x=grid.x.data[cells]+dx/2
+        #     y=grid.y.data[cells]+dx/2
+        #     z=grid.z.data[cells]+dx/2
+        #
+        #     r=dx/2 *np.sqrt(3)
+        #
+        #     search=[]
+        #     for j in range(len(cells)):
+        #         search.append( tree.query_ball_point( (x[j],y[j],z[j]), r[j] ) )
+        #
+        #     self.stars_fine[i]=np.int32(np.unique(np.concatenate(search)))
+        #
+        # with open(name, 'wb') as output:
+        #     pickle.dump(self.stars_fine, output,-1)
 
-    def get_star_fine(self,force=0):
+
+    def get_stars_fine(self,force=0):
         """
         get halo stars the fine way
         """
         grid=self.step.grid
-        stars=self.step.stars
+        stars=self.step.star
         name = self.path+"stars_fine"
         if os.path.isfile(name) and not force:
             print("Reading %s"%name)
@@ -634,18 +734,18 @@ class Fof:
             r=self.R200[halo_num]
             self.cells[halo_num]=tree.query_ball_point((xc,yc,zc), fact*r)
 # Boundary conditions
-#             if xc-r<0:
-#                 self.cells[halo_num].append(tree.query_ball_point((xc+1,yc,zc), r))
-#             if xc+r>1:
-#                 self.cells[halo_num].append(tree.query_ball_point((xc-1,yc,zc), r))
-#             if yc-r<0:
-#                 self.cells[halo_num].append(tree.query_ball_point((xc,yc+1,zc), r))
-#             if yc+r>1:
-#                 self.cells[halo_num].append(tree.query_ball_point((xc,yc-1,zc), r))
-#             if zc-r<0:
-#                 self.cells[halo_num].append(tree.query_ball_point((xc,yc,zc+1), r))
-#             if zc+r>1:
-#                 self.cells[halo_num].append(tree.query_ball_point((xc,yc,zc-1), r))
+            # if xc-r<0:
+            #     self.cells[halo_num].append(tree.query_ball_point((xc+1,yc,zc), r))
+            # if xc+r>1:
+            #     self.cells[halo_num].append(tree.query_ball_point((xc-1,yc,zc), r))
+            # if yc-r<0:
+            #     self.cells[halo_num].append(tree.query_ball_point((xc,yc+1,zc), r))
+            # if yc+r>1:
+            #     self.cells[halo_num].append(tree.query_ball_point((xc,yc-1,zc), r))
+            # if zc-r<0:
+            #     self.cells[halo_num].append(tree.query_ball_point((xc,yc,zc+1), r))
+            # if zc+r>1:
+            #     self.cells[halo_num].append(tree.query_ball_point((xc,yc,zc-1), r))
 
         with open(name, 'wb') as output:
             pickle.dump(self.cells, output,-1)
@@ -654,6 +754,7 @@ class Fof:
         """
         get grid cells of halo by associating each part to the nearest cell
         """
+
         grid=self.step.grid
 
         name = self.path+"cells_fine"
@@ -710,10 +811,11 @@ class Fof:
             setattr(self,type,part_mass)
 
         if type == "part_mass":
-            partID = self.part_id
-            part_mass=np.zeros(self.nfoftot)
 
+            partID = self.part
             unit_mass=2**(-3*self.lmin)
+
+            part_mass=np.zeros(self.nfoftot)
             for i in range(self.nfoftot):
                 part_mass[i]=unit_mass*len(partID[i])
             part_mass = part_mass/1.9891e30*info.unit_mass
@@ -727,8 +829,8 @@ class Fof:
         nptot=2**(3*self.lmin)
         part_mass=(1.-self.ob/self.om)/(nptot)
 
-        self.part_mass_fine=self.npart*part_mass
-        self.part_mass_fine=self.part_mass_fine/1.9891e30*self.unit_mass
+        Mo = self.unit_mass/1.9891e30
+        self.part_mass_fine=self.npart*part_mass*Mo
 
     def get_star_mass_fine(self):
         """
@@ -812,7 +914,7 @@ class Fof:
         luminosity.get_all_flux_1600(cur_step.star,t,info.unit_mass)
         flux = cur_step.star.flux_1600
 
-        fesc = 0.18
+        fesc = 0.4
         print("WARNING applying escape fraction of %f"%fesc)
         flux *= fesc
 
@@ -901,9 +1003,13 @@ class Fof:
             # vy=np.mean(self.part_vel[halo_num][1::3])
             # vz=np.mean(self.part_vel[halo_num][2::3])
 
-            vx=np.mean(self.step.part_fin.vx.data[self.part_id[halo_num]])
-            vy=np.mean(self.step.part.vy.data[self.part_id[halo_num]])
-            vz=np.mean(self.step.part.vz.data[self.part_id[halo_num]])
+            # vx=np.mean(self.step.part.vx.data[self.part_id[halo_num]])
+            # vy=np.mean(self.step.part.vy.data[self.part_id[halo_num]])
+            # vz=np.mean(self.step.part.vz.data[self.part_id[halo_num]])
+
+            vx=0
+            vy=0
+            vz=0
 
             self.mean_vel[halo_num] = [vx,vy,vz]
 
@@ -1132,6 +1238,8 @@ class Fof:
                 fy=grid.field_d.data[idx]*(grid.field_v.data[idx]-self.mean_vel[halo_num][1])
                 fz=grid.field_d.data[idx]*(grid.field_w.data[idx]-self.mean_vel[halo_num][2])
 
+            if type == "rho":
+                r=grid.field_d.data[idx]
 
             if type == "speed":
                 # hydro flux
@@ -1161,16 +1269,21 @@ class Fof:
 
             if type == "speed":
                 ds= 1. / n_healpix
+            if type == "rho":
+                ds=1.
 
             # scalar product
             # flux_data[halo_num]=(x_healpix*fx[idx] +
             #                      y_healpix*fy[idx] +
             #                      z_healpix*fz[idx] ) * ds
 
-            flux_data[halo_num]=(x_healpix*fx +
-                                 y_healpix*fy +
-                                 z_healpix*fz ) * ds
 
+            if type == "rho":
+                flux_data[halo_num]= r
+            else:
+                flux_data[halo_num]=(x_healpix*fx +
+                                     y_healpix*fy +
+                                     z_healpix*fz ) * ds
 
             # self.norm[halo_num]=np.sqrt( np.power(fx[idx],2) + np.power(fy[idx],2) + np.power(fz[idx],2) )
 
@@ -1204,31 +1317,37 @@ class Fof:
 
 ####################################################################################################################
 ####################################################################################################################
-    def get_instant_SFR(self):
+    def get_instant_SFR(self, force=0):
+        """
+        compute the averaged SFR over the last 10Myr by getting the mass of recent stellar particles
+        """
 
-        stars=self.step.stars
+        try:
+            ages=self.step.t - self.step.star.age.data
+            masses=self.step.star.mass.data
+        except AttributeError:
+            #case where snap do not get stars
+            self.instant_SFR=None
+            return
+
         from pyemma import io, time
         info = io.Info(self.path+"../../../")
 
-        # t=time.a2t_quad(np.max(stars.age.data), info.om, info.H0)
-        # print(np.max(stars.age.data))
-        t=np.max(stars.age.data)
-        # t=time.a2t_romberg(np.max(stars.age.data), info)
-
-
-        self.instant_sfr=np.zeros(self.nfoftot)
+        self.instant_SFR=np.zeros(self.nfoftot)
         for halo_num in range(self.nfoftot):
             star_mask=self.stars[halo_num]
-            age=t-stars.age.data[star_mask]
-            thresh=1e7
-            self.instant_sfr[halo_num]=np.sum( (stars.mass.data[star_mask])[age<thresh] )
-            self.instant_sfr[halo_num]*=info.unit_mass/1.9891e30
-            self.instant_sfr[halo_num]/=thresh
+            age=ages[star_mask]
+            mass=masses[star_mask]
+
+            thresh=1e7# thresh should be lower than tlife_feedback to neglect mass return
+
+            self.instant_SFR[halo_num]=np.sum( mass[age<thresh] )
+            self.instant_SFR[halo_num]*=info.unit_mass/1.9891e30
+            self.instant_SFR[halo_num]/=thresh
 
     def get_instant_SFR_from_gas(self):
         """
         compute theorical instant SFR using e*rho/tff
-        need cells
         """
 
         step=self.step
@@ -1244,6 +1363,7 @@ class Fof:
         for ihalo in range(n_halo):
 
             if len(self.cells[ihalo])>0:
+
                 dx=np.power(0.5,step.grid.l.data[self.cells[ihalo]]) *step.a *info.unit_l # m
                 dv=np.power(dx,3, dtype=np.float128) # m3
 
