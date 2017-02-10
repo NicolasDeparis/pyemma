@@ -514,18 +514,17 @@ class Fof:
         with open(name, 'wb') as output:
             pickle.dump(self.R200, output,-1)
 
-    def get_stars(self, force=0):
-        self._get_Part(self.step.star,"stars",force=force)
+    def get_stars(self, force=0, fact=1.):
+        self._get_Part(self.step.star,"stars",force=force, fact=fact)
 
-    def get_part(self, force=0):
-        self._get_Part(self.step.part,"part", force=force)
+    def get_part(self, force=0, fact=1.):
+        self._get_Part(self.step.part,"part", force=force, fact=fact)
 
-    def _get_Part(self,part, type,force=0):
+    def _get_Part(self,part, type,force=0, fact=1.):
         """
         get part in R200
         """
 
-        force=1
         name = self.path+type
         if os.path.isfile(name) and not force:
             with open(name, 'rb') as input:
@@ -549,7 +548,7 @@ class Fof:
             x=self.x[i]
             y=self.y[i]
             z=self.z[i]
-            r=self.R200[i]
+            r=self.R200[i]*fact
 
 
             part[i]=tree.query_ball_point((x,y,z), r)
@@ -802,24 +801,21 @@ class Fof:
         from pyemma import io
         info = io.Info(self.path+"../../../")
 
+        part_mass=np.zeros(self.nfoftot)
+
         if type == "star_mass":
             partID = self.stars
-            part_mass=np.zeros(self.nfoftot)
             for i in range(self.nfoftot):
                 part_mass[i]=np.sum(part.mass.data[partID[i]])
-            part_mass = part_mass/1.9891e30*info.unit_mass
-            setattr(self,type,part_mass)
 
         if type == "part_mass":
-
             partID = self.part
-            unit_mass=2**(-3*self.lmin)
-
-            part_mass=np.zeros(self.nfoftot)
+            unit_mass=2**(-3*self.lmin) * (1.-info.ob/info.om)
             for i in range(self.nfoftot):
                 part_mass[i]=unit_mass*len(partID[i])
-            part_mass = part_mass/1.9891e30*info.unit_mass
-            setattr(self,type,part_mass)
+
+        part_mass = part_mass/1.9891e30*info.unit_mass
+        setattr(self,type,part_mass)
 
     def get_part_mass_fine(self):
         """
@@ -1152,6 +1148,7 @@ class Fof:
                 setattr(self,"tot_flux_%s_%s"%(type,fact_name),pickle.load(input))
             return
 
+
         #healpix shere
         import healpy as hp
         n=4
@@ -1202,12 +1199,12 @@ class Fof:
             # #     skipped +=1
             # #     continue
             #
-            # # skip boundary conditions
-            # if (xc+R200 >1.) | (xc-R200 <0.) | \
-            #    (yc+R200 >1.) | (yc-R200 <0.) | \
-            #    (zc+R200 >1.) | (zc-R200 <0.):
-            #     skipped +=1
-            #     continue
+            # skip boundary conditions
+            if (xc+R200 >=1.) | (xc-R200 <0.) | \
+               (yc+R200 >=1.) | (yc-R200 <0.) | \
+               (zc+R200 >=1.) | (zc-R200 <0.):
+                skipped +=1
+                continue
             #
             # # get cell size
             # l_grid = grid.l.data[cells]
@@ -1226,6 +1223,7 @@ class Fof:
             yp=yc+y_healpix*fact*R200
             zp=zc+z_healpix*fact*R200
             idx = tree.query(np.transpose((xp,yp,zp)))[1]
+
 
             # Select the flux
             if type == "hydro":
@@ -1252,12 +1250,16 @@ class Fof:
                 fz=grid.field_w.data[idx]-self.mean_vel[halo_num][2]
 
 
-            # if type == "rad":
-            #     # radiative flux
-            #     fx=grid.rfield_fx0.data[cells]
-            #     fy=grid.rfield_fy0.data[cells]
-            #     fz=grid.rfield_fz0.data[cells]
-            #
+            if type == "rad":
+                # radiative flux
+                # fx=grid.rfield_fx0.data[cells]
+                # fy=grid.rfield_fy0.data[cells]
+                # fz=grid.rfield_fz0.data[cells]
+                fx=grid.rfield_fx0.data[idx]
+                fy=grid.rfield_fy0.data[idx]
+                fz=grid.rfield_fz0.data[idx]
+
+
             # if type == "ref":
             #     #reference flux
             #     fx=np.ones(len(cells))*3
@@ -1317,7 +1319,7 @@ class Fof:
 
 ####################################################################################################################
 ####################################################################################################################
-    def get_instant_SFR(self, force=0):
+    def get_instant_SFR(self, force=0, tshift=None):
         """
         compute the averaged SFR over the last 10Myr by getting the mass of recent stellar particles
         """
@@ -1336,7 +1338,13 @@ class Fof:
         self.instant_SFR=np.zeros(self.nfoftot)
         for halo_num in range(self.nfoftot):
             star_mask=self.stars[halo_num]
+
             age=ages[star_mask]
+
+            #To compute escape fraction age have to be shift by R200/c
+            if tshift is not None:
+                age-=tshift[halo_num]
+            
             mass=masses[star_mask]
 
             thresh=1e7# thresh should be lower than tlife_feedback to neglect mass return
@@ -1344,6 +1352,8 @@ class Fof:
             self.instant_SFR[halo_num]=np.sum( mass[age<thresh] )
             self.instant_SFR[halo_num]*=info.unit_mass/1.9891e30
             self.instant_SFR[halo_num]/=thresh
+
+
 
     def get_instant_SFR_from_gas(self):
         """
