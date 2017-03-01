@@ -177,6 +177,49 @@ def roberson_2010_fit():
     g = 1e-4
     y_fit  = (a + b*(z/c)**h ) /(1. + (z/c)**d ) + g
     plt.plot(z,y_fit)
+    
+    
+def xion_constrained():
+    """
+    Greig & Mesinger (2016) constraints are from Figure 10. Which includes all observational priors.
+     - plot lin-lin
+    """
+    obs = np.loadtxt('constrain_xion.txt').T
+    
+    plt.plot( obs[0], obs[7], 'k--', linewidth=2, alpha=0.1  )
+    plt.plot( obs[0], obs[8], 'k--', linewidth=2, alpha=0.1  )
+
+    plt.plot( obs[0], obs[5], 'k--', linewidth=2, alpha=0.1  )
+    plt.plot( obs[0], obs[6], 'k--', linewidth=2, alpha=0.1  )
+
+    plt.fill_between( obs[0], obs[8], obs[7], color='k', alpha=0.1 )
+    plt.fill_between( obs[0], obs[6], obs[5], color='k', alpha=0.1 )
+
+    plt.xlim(xmin=5.5)
+    plt.ylim(0,1)
+    
+    
+    
+    # 5.9 >0.89 Dark Gaps in Quasar Spectra McGreer et al. (2015)
+    # 5.6 >0.91 Dark Gaps in Quasar Spectra McGreer et al. (2015)
+    z2 = np.array([ [ 5.9, 0.89, 0.05, 0 ], [ 5.6, 0.91, 0.05, 0 ], [ 6.1, 0.58, 0.05, 0 ] ]) ### limites sup
+    x2 = z2[:,0]
+    y2 = z2[:,1]
+    yerror2 = [ 0.05, 0.05, 0.05 ] ### taille de la fleche 
+    
+    #plt.errorbar(x2, 1.-y2, xerr=None, yerr=yerror2, ls='none', fmt='ko', uplims=False )
+    
+    plt.errorbar(x2, 1.-y2, xerr=None, yerr=yerror2, ls='none', fmt='ko', uplims=True )
+    
+    
+    # Prevalence of Lyα Emission in Galaxies S14
+    # 4. 8.0 QHII (z = 8) < 0.35 Prevalence of Lyα Emission in Galaxies S14
+    z3 = np.array([ [ 6.3, 0.9, 0, 0.1 ], [ 8.0, 0.35, 0, 0.1 ] ]) ### limites inf
+    x3 = z3[:,0]
+    y3 = z3[:,1]
+    yerror3 = [ 0.05, 0.05 ] ### taille de la fleche 
+    plt.errorbar(x3, 1.-y3, xerr=None, yerr=yerror3, ls='none', fmt='k*', lolims=True )
+    
 
 def xion():
     """
@@ -205,7 +248,7 @@ def xion():
     y=z[:,1]
 
     yerror = [-z[:,3], z[:,2]]
-    plt.errorbar(x, 1.-y, xerr=None, yerr=yerror, ls='none', fmt='ko', label="Fan 2006")
+    plt.errorbar(x, 1.-y, xerr=None, yerr=yerror, ls='none', fmt='ko' )#, label="Fan 2006")
 
 
 
@@ -283,9 +326,10 @@ for curz in z:
 plt.plot(z,Q)
 """
 
-def luminosity_function(redshift):
+def luminosity_function(redshift, val_z6_2016=False):
     """
     observation LF in UV for Bouwens et al 2014
+    redshift = 4,5,6,7,8,10
     """
 
     if redshift == 4:
@@ -317,9 +361,398 @@ def luminosity_function(redshift):
         mag=[-21.23,-20.23,-18.23]
         LF=[0.000001,0.000010,0.000266]
         error=[0.000001,0.000005,0.000171]
+       
+    if val_z6_2016 and (redshift == 6) :
+        
+        mag=[-20.75,-20.25,-19.75,-19.25,-18.75,-18.25,-17.75,-17.25,-16.75,-16.25,-15.75,-15.25,-14.75,-14.25,-13.75,-13.25,-12.75]  
+        LF=[0.0002,0.0009,0.0007,0.0018,0.0036,0.0060,0.0071,0.0111,0.0170,0.0142,0.0415,0.0600,0.0817,0.1049, 0.1270,0.1451,0.1567]
+        error=[0.0002,0.0004,0.0004,0.0006,0.0009,0.0012,0.0014,0.0022,0.0039,0.0054,0.0083, 0.0128,0.0283,0.0743,0.1817,0.4114,0.8885]
+        # pour les dernierea valeurs il y a une erreure inf
+        #error_inf = [ 0.0069,0.010,0.0210,0.0435,0.0748,0.1073,0.1332 ]
+        error_inf=[0.0002,0.0004,0.0004,0.0006,0.0009,0.0012,0.0014,0.0022,0.0039,0.0054,0.0069,0.010,0.0210,0.0435,0.0748,0.1073,0.1332]
+        return mag,LF,error,error_inf
 
     return mag,LF,error
 
+def luminosity_function_BoRG():
+
+    ### Bradley, Trenti et al 2012
+    ### 2012ApJ...760..108B
+    ### Table 7
+    ### BoRG Stepwise Determination of the z ~ 8 UV LF^a
+
+    ### M_UV	phi_k (Mpc^-3 mag^-1)^b	
+    mag       = np.array( [ -22.14, -21.64, -21.14, -20.64, -20.14, -19.64 ] )
+    LF        = np.array( [ 0.015 , 0.023 , 0.198 , 0.604 , 1.296 , 4.504  ] ) * 1.e-4
+    error     = np.array( [ 0.    , 0.053 , 0.106 , 0.217 , 0.591 , 4.366  ] ) * 1.e-4
+    error_inf = np.array( [ 0.015 , 0.019 , 0.072 , 0.163 , 0.418 , 2.434  ] ) * 1.e-4
+
+    ### Notes. Assuming h = 0.7.
+    ### a For the 5sigma sample.
+    ### b The errors are derived from the 68% Bayesian credible intervals for a Poisson distribution.
+
+    return mag, LF, error, error_inf
+
+
+def luminosity_function_Atek():
+    
+    ### Atek et al 2015
+    ### 2015ApJ...814...69A
+    ### Table 2
+    ### Combined Constraints on the UV LF at z ~ 7
+
+    ### M_UV	Log(phiv)	phiv_err	
+    mag = np.array( [ -20.25, -19.75, -19.25, -18.75, -18.25, -17.75, -17.25, -16.75, -16.25, -15.75, -15.25 ] )
+    LF = np.array( [ -3.4184, -3.0263, -2.9044, -2.7418, -2.3896, -2.1032, -1.8201, -1.7548, -1.6044, -1.4012, -1.4012 ] )
+    error = 10**(LF+np.array( [ 0.1576, 0.1658, 0.1431, 0.1332, 0.1401, 0.1990, 0.1940, 0.1893, 0.2117, 0.3123, 0.3122 ] ))
+    error_inf = 10**(LF-np.array( [ 0.1576, 0.1658, 0.1431, 0.1332, 0.1401, 0.1990, 0.1940, 0.1893, 0.2117, 0.3123, 0.3122 ] ))
+
+    
+    return mag, 10**LF, error, error_inf
+
+def LF( redshift, F6=False ):
+    """
+    return a collection of observed LF at different redshift
+    error_sup = 0 => sup limit and error_inf = LF
+    
+    F6 : Finkelstein z=6, data are 'in conflict' with Bouwems, can choose to add them!
+    """
+
+    mag = np.array( [] )
+    LF  = np.array( [] )
+    error_sup = np.array( [] )
+    error_inf = np.array( [] )
+
+###############################################################################################    
+    #### z ~ 4 galaxies
+    if redshift == 4:
+        
+        ### Bouwens, Illingworth et al 2015
+        mag = np.append( mag, [-22.69,-22.19,-21.69,-21.19,-20.69,-20.19,-19.69,-19.19,-18.69,-18.19,-17.69,-16.94,-15.94] )
+        LF = np.append( LF, [ 0.000003, 0.000015, 0.000134, 0.000393, 0.000678, 0.001696, 0.002475, 0.002984, 0.005352, 0.006865, 0.010473, 0.024580, 0.025080 ] )
+        error_sup = np.append( error_sup, [ 0.000004, 0.000009, 0.000023, 0.000040, 0.000063, 0.000113, 0.000185, 0.000255, 0.000446, 0.001043, 0.002229, 0.003500, 0.007860 ] )
+        error_inf = np.append( error_inf, [ 0.000002, 0.000009, 0.000023, 0.000040, 0.000063, 0.000113, 0.000185, 0.000255, 0.000446, 0.001043, 0.002229, 0.003500, 0.007860 ] )
+        
+###############################################################################################
+    #### z ~ 5 galaxies
+    if redshift == 5:
+        
+        ### Bouwens, Illingworth et al 2015
+        mag = np.append( mag, [-23.11,-22.61,-22.11,-21.61,-21.11,-20.61,-20.11,-19.61,-19.11,-18.36,-17.36,-16.36] )
+        LF = np.append( LF, [0.000002, 0.000006, 0.000034, 0.000101, 0.000265, 0.000676, 0.001029, 0.001329, 0.002085, 0.004460, 0.008600, 0.024400 ] )
+        error_sup = np.append( error_sup, [0.000002, 0.000003, 0.000008, 0.000014, 0.000025, 0.000046, 0.000067, 0.000094, 0.000171, 0.000540, 0.001760, 0.007160 ] )
+        error_inf = np.append( error_inf, [0.000001, 0.000003, 0.000008, 0.000014, 0.000025, 0.000046, 0.000067, 0.000094, 0.000171, 0.000540, 0.001760, 0.007160 ] )
+        
+###############################################################################################
+    #### z ~ 6 galaxies
+    if redshift == 6:
+        
+        ### Bouwens, Illingworth et al 2015 (Table 5) 
+        mag = np.append( mag, [-22.52,-22.02,-21.52,-21.02,-20.52,-20.02,-19.52,-18.77,-17.77,-16.77] )
+        LF = np.append( LF, [0.000002, 0.000015, 0.000053, 0.000176, 0.000320, 0.000698, 0.001246, 0.001900, 0.006680, 0.013640] )
+        error_sup = np.append( error_sup, [0.000002, 0.000006, 0.000012, 0.000025, 0.000041, 0.000083, 0.000137, 0.000320, 0.001380, 0.004200] )
+        error_inf = np.append( error_inf, [0.0000019, 0.000006, 0.000012, 0.000025, 0.000041, 0.000083, 0.000137, 0.000320, 0.001380, 0.004200] )
+        
+        ### Bouwens et al 2016
+        mag = np.append( mag, [-20.75, -20.25, -19.75, -19.25, -18.75, -18.25, -17.75, -17.25, -16.75, -16.25, -15.75, -15.25, -14.75, -14.25, -13.75, -13.25, -12.75] )
+        LF = np.append( LF, [0.0002, 0.0009, 0.0007, 0.0018, 0.0036, 0.0060, 0.0071, 0.0111, 0.0170, 0.0142, 0.0415, 0.0600, 0.0817, 0.1049,  0.1270, 0.1451, 0.1567] )
+        error_sup = np.append( error_sup, [0.0002, 0.0004, 0.0004, 0.0006, 0.0009, 0.0012, 0.0014, 0.0022, 0.0039, 0.0054, 0.0083, 0.0128, 0.0283, 0.0743, 0.1817, 0.4114, 0.8885] )
+        error_inf = np.append( error_inf, [0.00019, 0.0004, 0.0004, 0.0006, 0.0009, 0.0012, 0.0014, 0.0022, 0.0039, 0.0054, 0.0069, 0.010, 0.0210, 0.0435, 0.0748, 0.1073, 0.1332] )
+        
+        ### Bowler, Dunlop et al 2015
+        ### take the 5 values that combined all observations
+        ###mag = np.append( mag, [ -22.52, -22.08, -21.74, -21.49, -21.22, -22.52, -22.11, -21.75, -21.48, -21.22, -22.04, -21.57, -21.22 ] )
+        ###LF = np.append( LF, [ 1.16e-6, 5.98e-6, 1.90e-5, 3.92e-5, 9.14e-5, 2.20e-6, 7.60e-6, 2.92e-5, 4.76e-5, 1.34e-4, 4.54e-6, 2.15e-5, 5.54e-5 ] )
+        ###error_sup = np.append( error_sup, [ 0.67e-6, 1.64e-6, 0.41e-5, 0.70e-5, 1.39e-5, 1.27e-6, 2.92e-6, 0.76e-5, 1.17e-5, 0.25e-4, 1.74e-6, 0.47e-5, 1.45e-5 ] )
+        ###error_inf = np.append( error_inf, [ 0.67e-6, 1.64e-6, 0.41e-5, 0.70e-5, 1.39e-5, 1.27e-6, 2.92e-6, 0.76e-5, 1.17e-5, 0.25e-4, 1.74e-6, 0.47e-5, 1.45e-5 ] )
+        mag = np.append( mag, [ -22.52, -22.08, -21.74, -21.49, -21.22 ] )
+        LF = np.append( LF, [ 1.16e-6, 5.98e-6, 1.90e-5, 3.92e-5, 9.14e-5 ] )
+        error_sup = np.append( error_sup, [ 0.67e-6, 1.64e-6, 0.41e-5, 0.70e-5, 1.39e-5 ] )
+        error_inf = np.append( error_inf, [ 0.67e-6, 1.64e-6, 0.41e-5, 0.70e-5, 1.39e-5 ] )
+        
+        ### Livermoore, Finkelstein 2016
+        ### data given by the courtesy of Finkelstein
+        if(F6):
+            mag = np.append( mag, [ -19.5, -19., -18.5, -18., -17.5, -17., -16.5, -16., -15.5, -15., -14.5, -14., -12.5] ) 
+            error_sup = np.append( error_sup, [ 1.29068000e-03, 1.62337000e-03, 3.18408000e-03, 3.55465000e-03, 5.17301000e-03, 7.30467000e-03, 1.86652000e-02, 4.90903000e-02, 7.93058000e-02, 1.94087000e-01, 3.47262000e-01, 6.40599000e-01, 8.46210000e+00] )  
+            LF = np.append( LF, [ 1.25644000e-03, 1.32561000e-03, 1.46530000e-03,6.22206000e-03, 9.80480000e-03,   2.82617000e-02, 6.92913000e-02, 7.94364000e-02, 1.68934000e-01, 1.73659000e-01, 2.09950000e-01, 2.55424000e-01, 3.67917000e+00] )     
+            error_inf = np.append( error_inf, [ 8.02685000e-04, 8.46872000e-04, 9.36112000e-04, 2.75138000e-03, 2.88560000e-03, 1.12357000e-02, 2.66551000e-02, 3.04275000e-02, 8.73843000e-02, 9.37922000e-02, 1.71756000e-01, 2.12002000e-01, 3.05371000e+00] )
+        
+        
+###############################################################################################
+    #### z ~ 7 galaxies
+    if redshift == 7:
+        
+        ### Bouwens, Illingworth et al 2015
+        mag = np.append( mag, [-22.16,-21.66,-21.16,-20.66,-20.16,-19.66,-19.16,-18.66,-17.91,-16.91] )
+        LF = np.append( LF, [0.000001,0.000033,0.000048,0.000193,0.000309,0.000654,0.000907,0.001717,0.005840,0.008500] )
+        error_sup = np.append( error_sup, [0.000002, 0.000009, 0.000015, 0.000034, 0.000061, 0.000100, 0.000177, 0.000478, 0.001460, 0.002940] )
+        error_inf = np.append( error_inf, [0.0000009, 0.000009, 0.000015, 0.000034, 0.000061, 0.000100, 0.000177, 0.000478, 0.001460, 0.002940] )
+        
+        ### Atek et al 2015
+        ### 2015ApJ...814...69A
+        ### Table 2
+        ### Combined Constraints on the UV LF at z ~ 7
+        ### M_UV	Log(phiv)	phiv_err	
+        mag = np.append( mag, [ -20.25, -19.75, -19.25, -18.75, -18.25, -17.75, -17.25, -16.75, -16.25, -15.75, -15.25 ] )
+        LF_tmp = np.array( [ -3.4184, -3.0263, -2.9044, -2.7418, -2.3896, -2.1032, -1.8201, -1.7548, -1.6044, -1.4012, -1.4012 ] )
+        LF = np.append( LF, 10**LF_tmp )
+        error_sup = np.append( error_sup, 10**LF_tmp*(10**np.array( [ 0.1576, 0.1658, 0.1431, 0.1332, 0.1401, 0.1990, 0.1940, 0.1893, 0.2117, 0.3123, 0.3122 ] )-1 ) )
+        error_inf = np.append( error_inf, 10**LF_tmp*(1-10**-np.array( [ 0.1576, 0.1658, 0.1431, 0.1332, 0.1401, 0.1990, 0.1940, 0.1893, 0.2117, 0.3123, 0.3122 ] ) ) )
+        
+        ### McLure, Dunlop et al 2013
+        mag = np.append( mag, [ -21., -20.5, -20., -19.5, -19., -18.5, -18., -17.5, -17. ] )
+        LF = np.append( LF, [ 0.00003, 0.00012, 0.00033, 0.00075, 0.0011, 0.0021, 0.0042, 0.0079, 0.011 ] )
+        error_sup = np.append( error_sup, [ 0.00001, 0.00002, 0.00005, 0.00009, 0.0002, 0.0006, 0.0009, 0.0019, 0.0025 ] )
+        error_inf = np.append( error_inf, [ 0.00001, 0.00002, 0.00005, 0.00009, 0.0002, 0.0006, 0.0009, 0.0019, 0.0025 ] )
+
+        ### Schenker, Robertson et al 2013
+        ### ISSUE WITH THE VALUE COMPARE TO THE FIGURE 4 AND 5
+        mag = np.append( mag, [ -20.65, -20.15, -19.65, -19.15, -18.65, -18.15, -17.65, -17.15 ] )
+        LF_tmp = np.array( [ -4.29, -3.71, -3.31, -3.02, -2.98, -2.56, -2.23, -3.03 ] )
+        LF = np.append( LF, 10**LF_tmp )
+        error_sup = np.append( error_sup, 10**LF_tmp*(10**np.array( [ 0.29, 0.14, 0.08, 0.13, 0.17, 0.19, 0.12, 0.54 ] )-1 ) )
+        error_inf = np.append( error_inf, 10**LF_tmp*(1-10**-np.array( [ 0.28, 0.10, 0.10, 0.06, 0.23, 0.06, 0.09, 2.34 ] ) ) )
+
+        ### Livermoore, Finkelstein 2016
+        ### data given by the courtesy of Finkelstein
+        mag = np.append( mag, [-19., -18.5, -18., -17.5, -17., -16.5, -16., -15.5, -15., -14.5] )
+        error_sup = np.append( error_sup, [ 0.00110651, 0.0020737, 0.00230657, 0.00389812, 0.00889569, 0.0202354, 0.0523458, 0.0836249, 0.218982, 0.472997 ] )
+        LF = np.append( LF, [ 0.0004412 , 0.00144649, 0.0035954 , 0.0055411 , 0.0197975 , 0.0249654 , 0.025434, 0.0593427, 0.213173, 0.335653 ] )
+        error_inf = np.append( error_inf, [ 0.00036619, 0.0009241, 0.00195688, 0.00301587, 0.0107841, 0.012891, 0.0164685, 0.0485471, 0.18356, 0.274591 ] )
+        
+        ### Castellano 2010
+        mag = np.append( mag, [ -21.1, -20.4 ] )
+        LF = np.append( LF, [ 0.000039, 0.000181 ] )
+        error_sup = np.append( error_sup, [ 0.000020, 0.000054 ] )
+        error_inf = np.append( error_inf, [ 0.000020, 0.000054 ] )
+
+        ### Bowler, Dunlop et al 2014
+        mag = np.append( mag, [ -21.75,-22.17, -22.66 ] )
+        LF_tmp = np.array( [ 4.10e-6, 1.69e-6, 3.59e-7 ] )
+        LF = np.append( LF, LF_tmp )
+        ### poisson error on the number of galaxy in the bin!
+        error_sup = np.append( error_sup, np.array([ 5.47e-6, 2.38e-6, 6.13e-7 ]) - LF_tmp )
+        error_inf = np.append( error_inf, LF_tmp - np.array([ 2.73e-6, 1.00e-6, 1.05e-7 ]) )
+
+        
+###############################################################################################        
+    #### z ~ 8 galaxies
+    if redshift == 8:
+        
+        ### Bouwens, Illingworth et al 2015
+        mag = np.append( mag, [-21.87,-21.37,-20.87,-20.37,-19.87,-19.37,-18.62,-17.62] )
+        LF = np.append( LF, [0.000005,0.000013,0.000058,0.000060,0.000331,0.000533,0.001060,0.002740] )
+        error_sup = np.append( error_sup, [0.000003,0.000005,0.000015,0.000026,0.000104,0.000226,0.000340,0.001040] )
+        error_inf = np.append( error_inf, [0.000003,0.000005,0.000015,0.000026,0.000104,0.000226,0.000340,0.001040] )
+        
+        ### Bradley, Trenti et al 2012
+        ### 2012ApJ...760..108B
+        ### Table 7
+        ### BoRG Stepwise Determination of the z ~ 8 UV LF^a
+        ### M_UV -> phi_k (Mpc^-3 mag^-1)^b
+        mag = np.append( mag, [ -22.14, -21.64, -21.14, -20.64, -20.14, -19.64 ] )
+        LF = np.append( LF, np.array([ 0.015 , 0.023 , 0.198 , 0.604 , 1.296 , 4.504  ])* 1.e-4 )
+        error_sup = np.append( error_sup, np.array([ 0.    , 0.053 , 0.106 , 0.217 , 0.591 , 4.366  ]) * 1.e-4 )
+        error_inf = np.append( error_inf, np.array([ 0.014 , 0.019 , 0.072 , 0.163 , 0.418 , 2.434  ]) * 1.e-4 )
+        ### Notes. Assuming h = 0.7.
+        ### a For the 5sigma sample.
+        ### b The errors are derived from the 68% Bayesian credible intervals for a Poisson distribution.
+        
+        ### McLure, Dunlop et al 2013
+        mag = np.append( mag, [ -21.25, -20.75, -20.25, -19.75, -19.25, -18.75, -18.25, -17.75, -17.25 ] )
+        LF = np.append( LF, [ 0.000008, 0.00003, 0.0001, 0.0003, 0.0005, 0.0012, 0.0018, 0.0028, 0.0050 ] )
+        error_sup = np.append( error_sup, [ 0.000003, 0.000009, 0.00003, 0.00006, 0.00012, 0.0004, 0.0006, 0.0008, 0.0025 ] )
+        error_inf = np.append( error_inf, [ 0.000003, 0.000009, 0.00003, 0.00006, 0.00012, 0.0004, 0.0006, 0.0008, 0.0025 ] )
+
+        ### Schenker, Robertson et al 2013
+        ### ISSUE WITH THE VALUE COMPARE TO THE FIGURE 4 AND 5
+        mag = np.append( mag, [ -22.00, -21.50, -21.00, -20.50, -20., -19.5, -19., -18.5, -18., -17.5 ] )
+        LF_tmp = np.array( [ -5.01, -5.02, -4.28, -4.15, -3.54, -3.34, -2.97, -2.91, -2.61, -2.57 ] )  
+        LF = np.append( LF, 10**LF_tmp ) 
+        error_sup = np.append( error_sup, 10**LF_tmp*(10**np.array( [ 0., 0.44, 0.16, 0.12, 0.17, 0.15, 0.09, 0.14, 0.18, 0.25 ] )-1 ) ) 
+        error_inf = np.append( error_inf, 10**LF_tmp*(1-10**-np.array( [ 4.30, 0.47, 0.24, 0.43, 0.06, 0.17, 0.20, 0.24, 0.20, 0.74 ] ) ) ) 
+        
+        ### Livermoore, Finkelstein 2016
+        ### data given by the courtesy of Finkelstein
+        mag = np.append( mag, [-20.5, -19.5, -18.5, -18., -17.5, -17., -16.5, -15.5, -15. ] )
+        LF = np.append( LF, [ 0.00049095, 0.0015859, 0.0020027, 0.00189917, 0.00167308, 0.00774832, 0.00901847, 0.0981332, 0.114366  ] )
+        error_sup = np.append( error_sup, [ 0.00112918, 0.00154097, 0.00205728, 0.00250216, 0.00384809, 0.0102084, 0.0207425, 0.138288, 0.263042 ] )
+        error_inf = np.append( error_inf,[ 0.00040749, 0.0013656, 0.00127944, 0.00155368, 0.00138866, 0.00633875, 0.00748533,  0.0802809, 0.0949239 ] )
+    
+###############################################################################################    
+    #### z ~ 9 galaxies
+    if redshift == 9:
+        
+        ### Bouwens, Oesch et al 2016 => Muv 1600
+        mag = np.append( mag, [ -21.94, -21.14, -20.34 ] )
+        LF = np.append( LF, [ 0.0000024, 0.0000044, 0.0000322 ] )
+        error_sup = np.append( error_sup, [ 0., 0.0000042, 0.0000217 ] )
+        error_inf = np.append( error_inf, [ 0.0000023, 0.0000024, 0.0000138 ] )
+        
+        ### McLure, Dunlop et al 2013
+        mag = np.append( mag, [ -18.00, -17.50 ] )
+        LF = np.append( LF, [ 0.0016, 0.0021 ] )
+        error_sup = np.append( error_sup, [ 0.0007, 0.0009 ] )
+        error_inf = np.append( error_inf, [ 0.0007, 0.0009 ] )
+        
+        ### Oesch, Bouwens et al 2013
+        mag = np.append( mag, [ -20.66, -19.66, -18.66, -17.66 ] )
+        LF = np.append( LF, [ 0.00018, 0.00015, 0.00035, 0.0016  ] )
+        error_sup = np.append( error_sup, [ 0., 0.00015, 0.00024, 0.0009 ] )
+        error_inf = np.append( error_inf, [ 0.00017, 0.00013, 0.00024, 0.0009 ] )
+
+        
+###############################################################################################
+    #### z ~ 10 galaxies
+    if redshift == 10:
+        
+        ### Bouwens, Oesch et al 2016 => Muv 1600
+        mag = np.append( mag, [ -22.05, -21.25, -20.45 ] )
+        LF = np.append( LF, [ 0.0000017, 0.0000009, 0.0000180 ] )
+        error_sup = np.append( error_sup, [ 0., 0.0000021, 0.0000174 ] )
+        error_inf = np.append( error_inf, [ 0.0000016, 0.0000007, 0.0000098 ] )
+    
+        ### Bouwens, Illingworth et al 2015
+        mag = np.append( mag, [-21.23,-20.23,-18.23] )
+        LF = np.append( LF, [0.000001,0.000010,0.000266] )
+        error_sup = np.append( error_sup, [0.000001,0.000005,0.000171] )
+        error_inf = np.append( error_inf, [0.0000009,0.000005,0.000171] )
+        
+        ### Oesch, Bouwens et al 2013
+        mag = np.append( mag, [ -20.78, -20.28, -19.78, -19.28, -18.78, -18.28, -17.78 ] )
+        LF = np.append( LF, [ 0.0000077, 0.000013, 0.000027, 0.000083, 0.00017, 0.00034, 0.00058 ] )
+        error_sup = np.append( error_sup, [ 0., 0., 0., 0., 0., 0., 0.00058 ] )
+        error_inf = np.append( error_inf, [  0.0000076, 0.000012, 0.000026, 0.000082, 0.00016, 0.00033,0.00050 ] )
+        
+        ### Oesch, Bouwens et al 2013
+        
+        mag = np.append( mag, [ -21.28, -20.78, -20.28, -19.78, -19.28, -18.78, -18.28, -17.78 ] )
+        LF = np.append( LF, [ 0.0000027, 0.000010, 0.0000078, 0.000020, 0.000089, 0.00025, 0.00068, 0.0013 ] )
+        error_sup = np.append( error_sup, [ 0.0000027, 0.000006, 0., 0., 0., 0., 0., 0.0013 ] )
+        error_inf = np.append( error_inf, [ 0.0000023, 0.000005, .0000077, 0.000019, 0.000088, 0.00024, 0.00067, 0.0011 ] )
+                              
+    return mag, LF, error_sup, error_inf
+
+def LF_fit( redshift ):
+    
+    magBin = np.linspace( -23, -12, 100 )
+    
+    if redshift== 4:
+        Ms = -21.05
+        a  = -1.69
+        Ps = 10**( -2.99 )
+        LF_fit = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+        
+        Ms = -21.05-0.06
+        a  = -1.69-0.04
+        Ps = 10**( -2.99+0.04 )
+        LF_fit_sup = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+
+        Ms = -21.05+0.05
+        a  = -1.69+0.03
+        Ps = 10**( -2.99-0.04 )
+        LF_fit_inf = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+       
+    if redshift== 5:
+        Ms = -20.92
+        a  = -1.80
+        Ps = 10**( -3.18 )
+        LF_fit = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+        
+        Ms = -20.92-0.05
+        a  = -1.80-0.04
+        Ps = 10**( -3.18+0.04 )
+        LF_fit_sup = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+
+        Ms = -20.92+0.05
+        a  = -1.80+0.04
+        Ps = 10**( -3.18-0.04 )
+        LF_fit_inf = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+        
+    if redshift== 6:
+        Ms = -20.79
+        a  = -1.91
+        Ps = 10**( -3.37 )
+        LF_fit = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+        
+        Ms = -20.79-0.04
+        a  = -1.91-0.03
+        Ps = 10**( -3.37+0.05 )
+        LF_fit_sup = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+
+        Ms = -20.79+0.05
+        a  = -1.91+0.04
+        Ps = 10**( -3.37-0.04 )
+        LF_fit_inf = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+        
+    if redshift== 7:
+        Ms = -20.66
+        a  = -2.02
+        Ps = 10**( -3.56 )
+        LF_fit = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+        
+        Ms = -20.66-0.04
+        a  = -2.02-0.03
+        Ps = 10**( -3.56+0.05 )
+        LF_fit_sup = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+
+        Ms = -20.66+0.06
+        a  = -2.02+0.05
+        Ps = 10**( -3.56-0.04 )
+        LF_fit_inf = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+        
+    if redshift== 8:
+        Ms = -20.52
+        a  = -2.13
+        Ps = 10**( -3.75 )
+        LF_fit = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+        
+        Ms = -20.52-0.04
+        a  = -2.13-0.03
+        Ps = 10**( -3.75+0.06 )
+        LF_fit_sup = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+
+        Ms = -20.52+0.06
+        a  = -2.13+0.05
+        Ps = 10**( -3.75-0.04 )
+        LF_fit_inf = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+        
+    if redshift== 9:
+        Ms = -20.39
+        a  = -2.24
+        Ps = 10**( -3.94 )
+        LF_fit = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+        
+        Ms = -20.39-0.05
+        a  = -2.24-0.04
+        Ps = 10**( -3.94+0.07 )
+        LF_fit_sup = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+
+        Ms = -20.39+0.07
+        a  = -2.24+0.06
+        Ps = 10**( -3.94-0.05 )
+        LF_fit_inf = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+        
+    if redshift== 10:
+        Ms = -20.25
+        a  = -2.35
+        Ps = 10**( -4.13 )
+        LF_fit = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+        
+        Ms = -20.25-0.06
+        a  = -2.35-0.04
+        Ps = 10**( -4.13+0.08 )
+        LF_fit_sup = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+
+        Ms = -20.25+0.07
+        a  = -2.35+0.06
+        Ps = 10**( -4.13-0.06 )
+        LF_fit_inf = 0.4*np.log(10) * Ps * 10**(-0.4*(magBin-Ms)*(a+1)) * np.exp( -10**(-0.4*(magBin-Ms)) )
+        
+        
+    return magBin, LF_fit, LF_fit_sup, LF_fit_inf
+    
 def luminosity_function_fit(redshift):
     """
     observation LF in UV for Bouwens et al 2014
@@ -344,6 +777,8 @@ def luminosity_function_fit(redshift):
         ps=0.1e-3
         a=-2.3
         LFB=ps*np.log(10)/2.5*10.**(-0.4*(MB-ms)*(a+1))*np.exp(-10**(-0.4*(MB-ms)))
+       
+        
     return MB, LFB
 
 def optical_depth(get=0):
@@ -451,7 +886,7 @@ def stellar_mass_function(redshift):
     """
 
     z = [4, 5, 6, 7, 8]
-    M = [7.25,7.75,8.25,8.75,9.25,9.75,10.25,10.75,11.25]
+    M = np.array([7.25,7.75,8.25,8.75,9.25,9.75,10.25,10.75,11.25])
 
     data = [
     [
@@ -550,3 +985,51 @@ def stellar_mass_function_fit():
                           (SMF_fits[3,3]/SMF_fits[3,1])*(zcen(binMs)/SMF_fits[3,1])**SMF_fits[3,2]*np.exp(-(zcen(binMs)/SMF_fits[3,1]) )*(binMs[1:]-binMs[:-1]),
                           (SMF_fits[4,3]/SMF_fits[4,1])*(zcen(binMs)/SMF_fits[4,1])**SMF_fits[4,2]*np.exp(-(zcen(binMs)/SMF_fits[4,1]) )*(binMs[1:]-binMs[:-1]),
                         ])
+    
+    
+def ionization_rate_gamma():
+    """
+    Observations of Gamma the photo-ionization rate.
+    The observation are not well calibrate to each other (see Becker & Bolton 13 Figure.11)
+    but the difference is small
+    """
+    ### Becker & Bolton 13
+    obs_gamma = np.array( [ [ 2.40, 2.80, 3.20, 3.60, 4.00, 4.40, 4.75 ],
+                           [ 0.015, -0.066, -0.103, -0.097, -0.072, -0.019, -0.029 ],
+                           [ -0.146, -0.131, -0.121, -0.118, -0.117, -0.122, -0.147 ], 
+                           [ 0.132, 0.129, 0.130, 0.131, 0.135, 0.140, 0.156 ]] )
+    ### Calverley 11
+    obs_gamma2 = np.array( [ [ 5, 6 ],
+                             [ -0.15, -0.84 ],
+                             [ -0.16, -0.18 ], 
+                             [  0.16, 0.18 ]] )
+
+    ### Wyithe and Bolton 11
+    obs_gamma3 = np.array( [ [ 5, 6 ],
+                             [ np.log10(0.47), np.log10(0.18) ],
+                             [ -0.2, -0.09 ], 
+                             [ 0.3, 0.18 ]] )
+    
+    plt.plot( obs_gamma[0], 10**obs_gamma[1], 'ok')
+    plt.errorbar( obs_gamma[0], 10**obs_gamma[1], 
+                 yerr=[10**obs_gamma[1] - 10**(obs_gamma[1]+obs_gamma[2]), 
+                       10**(obs_gamma[1]+obs_gamma[3]) - 10**obs_gamma[1] ],
+                fmt='none', ecolor='k' )
+
+    plt.plot( obs_gamma2[0]-0.02, 10**obs_gamma2[1], 'or')
+    plt.errorbar( obs_gamma2[0]-0.02, 10**obs_gamma2[1], 
+                 yerr=[10**obs_gamma2[1] - 10**(obs_gamma2[1]+obs_gamma2[2]), 
+                       10**(obs_gamma2[1]+obs_gamma2[3]) - 10**obs_gamma2[1] ],
+                fmt='none', ecolor='r' )
+
+    plt.plot( obs_gamma3[0]+0.02, 10**obs_gamma3[1], 'ob')
+    plt.errorbar( obs_gamma3[0]+0.02, 10**obs_gamma3[1], 
+                 yerr=[10**obs_gamma3[1] - 10**(obs_gamma3[1]+obs_gamma3[2]), 
+                       10**(obs_gamma3[1]+obs_gamma3[3]) - 10**obs_gamma3[1] ],
+                fmt='none', ecolor='b' )
+    
+    
+    
+    
+    
+    

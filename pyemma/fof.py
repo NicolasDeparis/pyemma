@@ -8,7 +8,8 @@ from scipy import spatial
 
 class Fof:
     def __init__(self,folder,stepnum):
-        self.exec_folder = "/home/deparis/Emma/utils/pfof/"
+        #self.exec_folder = "/home/deparis/Emma/utils/pfof/"
+        self.exec_folder = "/astro/home/nicolas.gillet/EMMA/utils/FOF/"
 
         self.folder=folder
         self.stepnum=stepnum
@@ -131,7 +132,7 @@ class Fof:
             f.write("0 !group size should be set to zero\n")
             f.write("0.2 !percolation parameter\n")
             f.write("%d !snapnum\n"%self.stepnum)
-            f.write("10 !min mass\n")
+            f.write("20 !min mass\n")
             f.write("100000000 !mass max\n")
             f.write(".false. !star ?\n")
             f.write(".false. ! metal ?\n")
@@ -146,7 +147,7 @@ class Fof:
         self.write_fofin()
         self.write_infosim()
 
-        self.convert()
+        self.convert() ### convert from HDF5 to a part list for FOF
 
         curdir=os.getcwd()
         os.chdir(self.exec_folder)
@@ -155,7 +156,7 @@ class Fof:
         try :
             os.mkdir(folder_name)
         except OSError:
-            print( "Can't open %s"%folder_name)
+            print( "Can't open / or already created (overrighting!) %s"%folder_name)
             pass
 
         commande= "mpirun -np %d ./fof"%(nproc_fof)
@@ -181,7 +182,8 @@ class Fof:
         Find coarse level by reading param.run
         """
         from pyemma import io
-        info = io.Info(self.folder+"../")
+        #info = io.Info(self.folder+"../")
+        info = io.Info(self.folder)
         self.nproc_sim=info.nproc
 
     def getLmin(self):
@@ -189,7 +191,8 @@ class Fof:
         Find coarse level by reading param.run
         """
         from pyemma import io
-        runparam = io.RunParam(self.folder+"../")
+        #runparam = io.RunParam(self.folder+"../")
+        runparam = io.RunParam(self.folder)
         self.lmin=runparam.level_coarse
 
     def getCosmo(self):
@@ -204,9 +207,9 @@ class Fof:
 
     def getNfofTot(self):
         """
-        get the total number oh halos by reading halo_masst headers
+        get the total number of halos by reading halo_masst headers
         """
-        print("Getting nfoftot")
+        #print("Getting nfoftot")
         nfoftot=0
         for icpu in range(self.ncpu):
             with open("%s%05d/halo/halo_masst_%05d"%(self.folder,self.stepnum, icpu)) as f:
@@ -222,10 +225,8 @@ class Fof:
         path = self.folder
         stepnum = self.stepnum
 
-
-
         folder ="%s%05d/"%(path, stepnum)
-        f = h5py.File("%spart_x_%05d.h5"%(folder,stepnum), "r")
+        f = h5py.File("%s/part_x_%05d.h5"%(folder,stepnum), "r")
         tsim = f.attrs['a']
         data = f['data'][:]
         f.close()
@@ -338,7 +339,7 @@ class Fof:
 ####################################################################################################################
 
     def read_masst(self):
-        print("Reading fof masst")
+        #print("Reading fof masst")
 
         self.idx=np.zeros(self.nfoftot)
         self.npart=np.zeros(self.nfoftot)
@@ -366,7 +367,7 @@ class Fof:
                 offset+=nfof
 
     def read_struct(self):
-        print("Reading fof struct")
+        #print("Reading fof struct")
 
         nhalo=0
 
@@ -415,7 +416,7 @@ class Fof:
     def get_R200(self, force=0):
         name = self.path+"R200"
         if os.path.isfile(name) and not force:
-            print("Reading %s"%name)
+            #print("Reading %s"%name)
             with open(name, 'rb') as input:
                 self.R200 = pickle.load(input)
             return
@@ -435,16 +436,24 @@ class Fof:
 
     def get_part(self,part, force=0):
         self._get_Part(part,"part", force=force)
+        
+    def get_part_LSS(self,part, R, force=0):
+        """ 
+        Return DM part in a Radius R, 
+        Usefull to compute Large Scale Structure Overdensity
+        """
+        self._get_Part(part,"part_LSS", R=R, force=force)
 
-    def _get_Part(self,part, type,force=0):
+    def _get_Part(self,part, type, R=[], force=0):
         """
         get part in R200
+        Or in radius R if not empty
         """
 
         name = self.path+type
         if os.path.isfile(name) and not force:
             with open(name, 'rb') as input:
-                print("Reading %s"%name)
+                #print("Reading %s"%name)
                 setattr(self,type,pickle.load(input))
             return
 
@@ -457,13 +466,53 @@ class Fof:
         n=self.nfoftot
         part=np.empty(n, dtype=np.object)
 
+        comptBound = 0
+        
         for i in range(n):
             x=self.x[i]
             y=self.y[i]
             z=self.z[i]
-            r=self.R200[i]
+            #
+            if R==[]:
+                r=self.R200[i]
+            else:
+                r=R
 
             part[i]=tree.query_ball_point((x,y,z), r)
+            
+            ### Boundary conditions
+            x_border = (x-r<0) or (x+r>1) ### is the halo at a border
+            y_border = (y-r<0) or (y+r>1)
+            z_border = (z-r<0) or (z+r>1)
+            
+            x_sign = np.sign( 0.5 - x ) ### on which side of the border ? work if r<0.5 !
+            y_sign = np.sign( 0.5 - y )
+            z_sign = np.sign( 0.5 - z )
+            
+            bound=[]
+            if x_border:
+                bound.append(tree.query_ball_point((x+x_sign,y,z), r))
+            if y_border:
+                bound.append(tree.query_ball_point((x,y+y_sign,z), r))
+            if z_border:
+                bound.append(tree.query_ball_point((x,y,z+z_sign), r))
+              
+            if x_border and y_border:
+                bound.append(tree.query_ball_point((x+x_sign,y+y_sign,z), r))
+            if x_border and z_border:
+                bound.append(tree.query_ball_point((x+x_sign,y,z+z_sign), r))
+            if y_border and z_border:
+                bound.append(tree.query_ball_point((x,y+y_sign,z+z_sign), r))
+             
+            if x_border and y_border and z_border:
+                bound.append(tree.query_ball_point((x+x_sign,y+y_sign,z+z_sign), r))
+               
+            if len(bound):
+                #print(bound)
+                comptBound += 1
+                part[i].append(bound)
+                
+        #print( comptBound )
 
             # Boundary conditions
 #             bound=[]
@@ -513,7 +562,7 @@ class Fof:
 
         name = self.path+"stars_fine"
         if os.path.isfile(name) and not force:
-            print("Reading %s"%name)
+            #print("Reading %s"%name)
             with open(name, 'rb') as input:
                 self.stars_fine = pickle.load(input)
             return
@@ -570,6 +619,26 @@ class Fof:
                 youngest_stars = np.min(t- star.age.data[self.stars[i]])
                 if youngest_stars <= age_max:
                     self.getYoungStars[i] = True
+                    
+    def get_instSF(self,star,age_max):
+        """
+        Check if halo get stars of age lower than age_max
+        If so, it sum the stellar mass of Young stars
+        """
+        from pyemma import io
+        info = io.Info(self.path+"../../../")
+        
+        n=self.nfoftot
+        self.instSF=np.zeros(n, dtype=np.float)
+        t=np.max(star.age.data)
+        
+        for i in range(self.nfoftot):
+            if self.getStars[i]:
+
+                youngest_stars = np.where( (t- star.age.data[self.stars[i]])<age_max )[0]
+                if youngest_stars.size:
+                    self.instSF[i] = star.mass.data[ self.stars[i] ][youngest_stars].sum()/1.9891e30*info.unit_mass / age_max
+                    #self.instSF[i] = star.mass.data[self.stars[i]].sum()
 
     def get_cells(self,grid, force=0):
         """
@@ -578,7 +647,7 @@ class Fof:
 
         name = self.path+"cells"
         if os.path.isfile(name) and not force:
-            print("Reading %s"%name)
+            #print("Reading %s"%name)
             with open(name, 'rb') as input:
                 self.cells = pickle.load(input)
             return
@@ -624,7 +693,7 @@ class Fof:
 
         name = self.path+"cells_fine"
         if os.path.isfile(name) and not force:
-            print("Reading %s"%name)
+            #print("Reading %s"%name)
             with open(name, 'rb') as input:
                 self.cells_fine = pickle.load(input)
             return
@@ -659,8 +728,11 @@ class Fof:
 
     def get_part_mass(self,part):
         self._get_Part_mass(part, type="part_mass")
+        
+    def get_part_DLSS(self,part, R=[], info=[]):
+        self._get_Part_mass(part, type="part_DLSS", R=R, info=info)
 
-    def _get_Part_mass(self,part,type):
+    def _get_Part_mass(self,part,type, R=[], info=[] ):
         """
         get part mass in Mo
         """
@@ -676,12 +748,27 @@ class Fof:
             setattr(self,type,part_mass)
 
         if type == "part_mass":
-            partID = self.part
+            partID = self.part ### get_part as to be done first
             part_mass=np.zeros(self.nfoftot)
             for i in range(self.nfoftot):
                 unit_mass=np.power(128.,-3)*(info.om)
                 part_mass[i]=unit_mass*len(partID[i])
             part_mass = part_mass/1.9891e30*info.unit_mass
+            setattr(self,type,part_mass)
+            
+        if type == "part_DLSS":
+            partID = self.part_LSS ### get_part as to be done first
+            part_mass=np.zeros(self.nfoftot)
+            for i in range(self.nfoftot):
+                unit_mass=np.power(128.,-3)*(info.om)
+                part_mass[i]=unit_mass*len(partID[i])
+                
+            Mtot = 2.**(3*info.level_min) * unit_mass/1.9891e30*info.unit_mass
+            Ltot = info.box_size_hm1_Mpc / info.H0 * 100.
+            Vtot = Ltot**3
+            V = (4./3)*np.pi * (R*Ltot)**3
+            
+            part_mass = part_mass/1.9891e30*info.unit_mass / V / Mtot * Vtot
             setattr(self,type,part_mass)
 
     def get_part_mass_fine(self):
@@ -760,17 +847,18 @@ class Fof:
         with open(name, 'wb') as output:
             pickle.dump(self.integ_egy, output,-1)
 
-    def get_luminosity_1600(self,cur_step):
+    def get_luminosity_1600(self,cur_step, model='', fesc=1 ):
         from pyemma import io,time,luminosity
 
         info = io.Info(self.path+"../../../")
 
         t=time.a2t_quad(cur_step.a, info.om, info.H0)
-        luminosity.get_all_flux_1600(cur_step.star,t,info.unit_mass)
+        luminosity.get_all_flux_1600(cur_step.star,t,info.unit_mass, model=model)
         flux = cur_step.star.flux_1600
-
-        print("WARNING applying escape fraction of 0.35")
-        flux *= 0.35
+        
+        fe = fesc
+        flux *= fe
+        #print("WARNING applying escape fraction of %.2f"%fe)
 
         flux_tot=np.zeros(self.nfoftot)
         for i in range(self.nfoftot):
@@ -845,7 +933,7 @@ class Fof:
 
         name = self.path+"mean_vel"
         if os.path.isfile(name) and not force:
-            print("Reading %s"%name)
+            #print("Reading %s"%name)
             with open(name, 'rb') as input:
                 self.mean_vel = pickle.load(input)
             return
@@ -872,7 +960,7 @@ class Fof:
 
         name = self.path+"inertia"
         if os.path.isfile(name) and not force:
-            print("Reading %s"%name)
+            #print("Reading %s"%name)
             with open(name, 'rb') as input:
                 self.inertia_eig_val = pickle.load(input)
                 self.inertia_eig_vec = pickle.load(input)
@@ -991,7 +1079,7 @@ class Fof:
         name = self.path+"flux_r200_%s"%type
         fact_name = ("%0.2f"%(fact)).replace(".","_")
         if os.path.isfile(name) and not force:
-            print("Reading %s"%name)
+            #print("Reading %s"%name)
             with open(name, 'rb') as input:
                 setattr(self,"flux_data_%s_%s"%(type,fact_name),pickle.load(input))
                 setattr(self,"tot_flux_%s_%s"%(type,fact_name),pickle.load(input))
@@ -1109,6 +1197,7 @@ class Fof:
         info = io.Info(self.path+"../../../")
 
         t=time.a2t_quad(stars.age.tsim, info.om, info.H0)
+        #t=time.a2t_quad(stars.age.data, info.om, info.H0)
 
         self.instant_sfr=np.zeros(self.nfoftot)
         for halo_num in range(self.nfoftot):
@@ -1139,7 +1228,8 @@ class Fof:
                 rho_halo=rho[self.cells[ihalo]] # kg.m-3
                 tff=np.sqrt(3*np.pi/(32*6.67384e-11*rho_halo)) # s
 
-                self.instant_SFR_from_gas[ihalo] = np.mean(param.run.efficiency*rho_halo/tff * dv)  # kg.s-1
+                #self.instant_SFR_from_gas[ihalo] = np.mean(param.run.efficiency*rho_halo/tff * dv)  # kg.s-1
+                self.instant_SFR_from_gas[ihalo] = np.sum(param.run.efficiency*rho_halo/tff * dv)  # kg.s-1
                 self.instant_SFR_from_gas[ihalo]*= 1./2e30 *(365*24*3600) # Mo.yr-1
 
     def get_time_newest_star(self, stars):

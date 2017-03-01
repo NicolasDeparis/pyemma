@@ -12,19 +12,22 @@ def flux2mag(flux):
     mag = -2.5*np.log10(flux)
     return mag
 
-def readStarburst_old(convert=False):
+def readStarburst_old(convert=False, filename=''):
 
-    filename="/home/deparis/jupyter/Starburst99/fig1e.dat.txt"
+    if( filename=='' ):
+        filename="/astro/home/nicolas.gillet/WORK/analyse_simu/fig7e.dat"
+       
+    print( 'Reading %s'%filename )
     #reading header
     with open(filename, 'r') as file:
         file.readline()
         file.readline()
         name=file.readline().split()[2:]
 
-    age = [	float(n[:-3])*1e6 for n in name]
+    age = np.array( [float(n[:-3])*1e6 for n in name] )
 
     #loading data
-    data = np.loadtxt(filename,unpack=True, skiprows=3)
+    data = np.loadtxt( filename, unpack=True, skiprows=3 )
     data[1:] = np.power(10,data[1:])
 
     if convert :
@@ -34,13 +37,17 @@ def readStarburst_old(convert=False):
 
     return age,data[0], data[1:]
 
-def readStarburst(convert=False):
+def readStarburst(filename=''):
 
     # file = "../jupyter/Starburst99/Salpeter/SALP_AUBERT.spectrum1"
-    file = "../jupyter/Starburst99/Topheavy/TH_AUBERT.spectrum1"
+    # file = "../jupyter/Starburst99/Topheavy/TH_AUBERT.spectrum1"
     # file = "../jupyter/Starburst99/Kroupa/KROUPA_DOM.spectrum1"
+    if( filename=='' ):
+        filename = "/astro/home/nicolas.gillet/WORK/analyse_simu/TH_AUBERT.spectrum1"
+        
+    print( 'Reading %s'%filename )
 
-    data = np.loadtxt(file,unpack=True,skiprows=6)
+    data = np.loadtxt(filename,unpack=True,skiprows=6)
     time = np.unique(data[0,:])
 
     spectrum = []
@@ -50,7 +57,30 @@ def readStarburst(convert=False):
             wavelenght = cur_data[1]
             spectrum.append(np.power(10,cur_data[2]))
 
+    return time, wavelenght, np.array(spectrum)
+
+def readBPASS(filename=''):
+    """
+    read BPASS spectrum
+    time [y]
+    wavelenght [A]
+    spectrum [erg.s-1.A-1]
+    """
+    
+    if filename=='':
+        filename = "/astro/home/nicolas.gillet/WORK/analyse_simu/BPASSv2_imf135_300/OUTPUT_POP/spectra-bin.z001.dat"
+        
+    print( 'Reading %s'%filename )
+    
+    data = np.loadtxt(filename, unpack=True)
+    
+    spectrum = data[1:,:] * 3.8274e26 * 1.e7 ### convert for Luminosity_sun.A-1 to erg.s-1.A-1
+    wavelenght = data[0]
+    time = 10**( 6 +0.1*np.linspace( 0, spectrum.shape[0], spectrum.shape[0] ) )
+    
     return time, wavelenght, spectrum
+    
+    
 
 def getM1600(_x0, spectremodeleenergparsparAngstrom):
     """
@@ -96,8 +126,20 @@ def getM1600(_x0, spectremodeleenergparsparAngstrom):
 
     return MAB1600
 
-def getModel():
-    age, wavelength, spectre = readStarburst()
+def getModel(BPASS=False, oldSB99=False, filename=''):
+    
+    if(BPASS and not(oldSB99)):
+        age, wavelength, spectre = readBPASS(filename=filename)
+        
+    if(not(BPASS) and oldSB99):
+        age, wavelength, spectre = readStarburst_old(filename=filename)
+        
+    if(not(BPASS) and not(oldSB99)):
+        age, wavelength, spectre = readStarburst(filename=filename)
+      
+    if(BPASS and oldSB99):
+        print( "choose BPASS OR SB99 file!" )
+        return -1
 
     n = len(age)
     modelMag = np.zeros(n)
@@ -112,15 +154,17 @@ def sumMag(mass, age, modelmag, modelage):
     res=np.sum(mass*np.power(10,-mags/2.5))
     return -2.5*np.log10(res)
 
-def get_all_flux_1600(stars,current_time,unit_mass):
+def get_all_flux_1600(stars,current_time,unit_mass, model='' ):
     """
     get luminous flux of stars in M1600 band
     """
-
-    modelmag, modelage = getModel()
+    if( model=='' ):
+        modelmag, modelage = getModel()
+    else:
+        modelmag, modelage = model
     age = current_time - stars.age.data
     mass = stars.mass.data*unit_mass/1.9891e30/1e6
-    mags=np.interp(age,modelage,modelmag)
+    mags = np.interp(age,modelage,modelmag)
     flux = mass * mag2flux(mags)
 
     stars.flux_1600=flux

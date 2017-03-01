@@ -4,9 +4,9 @@ import os
 import numpy as np
 import h5py
 
-import fof
+import pyemma.fof as fof
 # import hop
-import optical_depth
+# import optical_depth
 
 class Run:
     """
@@ -48,14 +48,14 @@ class Step:
         self.star=Fields(number,folder,"star_") #stars
         self.grid=Fields(number,folder,"grid_") #AMR grid
 
-        self.optical_depth=optical_depth.OpticalDepth() #Optical depth
+#        self.optical_depth=optical_depth.OpticalDepth() #Optical depth
 
         self.a=self.grid._get_a() # scale factor
         self.z=1./self.a -1 # redshift
 
 
 #comment these line in case of probleme with halo finder
-#       self.hop=hop.Hop(number,folder)
+#        self.hop=hop.Hop(number,folder)
         self.fof=fof.Fof(folder,number)
 
 class Fields:
@@ -117,7 +117,7 @@ class Field():
         The main reader function
         """
         if not self._isloadded or force :
-            print("reading %s"%self._field)
+            #print("Reading %s"%self._field)
 
             f = h5py.File(self._filename, "r")
             self.data=f['data'][:]
@@ -212,7 +212,7 @@ class RunParam:
     Reader for param.run
     """
     def __init__(self,folder):
-        filename = "%s%s"%(folder,"data/param.run")
+        filename = "%s%s"%(folder,"param.run")
         with open(filename) as f:
             for line in f:
                 if line[0]!="#":
