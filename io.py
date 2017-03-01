@@ -17,13 +17,15 @@ class Run:
     look for subfolder of data/ with name convertible into int
     """
 
-    def __init__(self,folder):
+    def __init__(self,folder, hdf5=True):
+
 
         self.folder=folder
         self._data_folder=folder+"data/"
         self.step_list=[]
+        self.nstep=0
 
-        self._hdf5 = True
+        self._hdf5 = hdf5
 
         for folder in np.sort(os.listdir(self._data_folder)):
             try:
@@ -32,12 +34,17 @@ class Run:
                 continue
 
             key="step_%05d"%stepnum
-            val= Step(stepnum, self._data_folder)
+            val= Step(stepnum, self._data_folder, hdf5)
             setattr(self,key,val)
 
             self.step_list.append(val)
+            self.nstep+=1
 
-        self.param=Param(self.folder)
+        try:
+            self.param=Param(self.folder)
+        except FileNotFoundError:
+            print('no param')
+            pass
 
         try:
             self.movie=movie.Movie("%sdata/movie/"%self.folder)
@@ -45,8 +52,9 @@ class Run:
             print('no movie')
             pass
 
+
 class Step:
-    def __init__(self,number,folder):
+    def __init__(self,number,folder, hdf5=True):
         """
         Step object
         Contain all the data associated to an output time step
@@ -54,23 +62,26 @@ class Step:
 
         self.n=number # snap number
 
-        self.part=Fields(number,folder,"part_") #particles
-        self.star=Fields(number,folder,"star_") #stars
-        self.grid=Fields(number,folder,"grid_") #AMR grid
+        self.part=Fields(number,folder,"part_",hdf5) #particles
+        self.star=Fields(number,folder,"star_",hdf5) #stars
+        self.grid=Fields(number,folder,"grid_",hdf5) #AMR grid
+
 
 #        self.optical_depth=optical_depth.OpticalDepth() #Optical depth
 
         # scale factor
         self.a=self.grid._get_a()
-        if self.a == None:
+        if self.a is None:
             self.a=self.part._get_a()
 
         self.t=self.grid._get_t()
-        if self.t == None:
+        if self.t is None:
             self.t=self.part._get_t()
 
-        self.z=1./self.a -1 # redshift
-
+        if self.a is not None:
+            self.z=1./self.a -1 # redshift
+        else :
+            self.z=None
 
 #comment these line in case of probleme with halo finder
 
@@ -78,7 +89,7 @@ class Step:
         self.fof=fof.Fof(folder,number,self)
 
 class Fields:
-    def __init__(self, number,folder, sets_type):
+    def __init__(self, number,folder, sets_type, hdf5=True):
         """
         Create a set of field object
         """
@@ -89,15 +100,25 @@ class Fields:
         path = "%s%05d/"%(folder,number)
         for cur_folder in  np.sort(os.listdir(path)):
 
-            if not "h5" in cur_folder:
-                continue
-            if  os.path.isdir("%s%s"%(path,cur_folder)):
-                continue
+
+            if hdf5:
+                if not "h5" in cur_folder:
+                    continue
+                if  os.path.isdir("%s%s"%(path,cur_folder)):
+                    continue
 
             if self._type in cur_folder:
-                key=(cur_folder[5:].replace(".","_").replace("[","").replace("]",""))[:-9]
-                val= Field(folder,number,cur_folder[:-9])
+                if hdf5:
+                    key=(cur_folder[5:].replace(".","_").replace("[","").replace("]",""))[:-9]
+                    val= Field(folder,number,cur_folder[:-9], hdf5)
+                else:
+
+                    key=(cur_folder[5:].replace(".","_").replace("[","").replace("]",""))
+                    val= Field(folder,number,cur_folder, hdf5)
+
                 setattr(self,key,val)
+
+
 
     def _get_a(self,force=0):
         """
@@ -117,16 +138,21 @@ class Fields:
 
 class Field():
     """
-    Field object (this is the main data object)
+    Field object (this is the main reader object)
     """
 
-    def __init__(self,runpath,stepnum,field):
+    def __init__(self,runpath,stepnum,field,hdf5=True):
         self._runpath=runpath
         self._stepnum=stepnum
         self._field=field
         self._field_folder="%s%05d/"%(runpath,stepnum)
-        self._filename="%s%s_%05d.h5"%(self._field_folder,field,stepnum)
         self._isloadded=False
+        self.hdf5=hdf5
+
+        if hdf5:
+            self._filename="%s%s_%05d.h5"%(self._field_folder,field,stepnum)
+        else:
+            self._filename="%s%s"%(self._field_folder,field)
 
     def __getattr__(self, name):
         """
@@ -134,42 +160,59 @@ class Field():
         """
         if name == 'data':
             self.read()
-            # self.read_old()
             return self.__getattribute__(name)
         else:
             raise AttributeError
-
-    def read(self, xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1, force=0):
-        """
-        The main reader function
-        """
-        if not self._isloadded or force :
-            #print("Reading %s"%self._field)
-
-            f = h5py.File(self._filename, "r")
-            self.data=f['data'][:]
-            f.close()
-
-            self._isloadded=True
-        else:
-            print("%s allready loaded, use force=1 to reload"%self._field)
 
     def _get_a(self):
         """
         read the scale factor
         """
-        f = h5py.File(self._filename, "r")
-        return f.attrs['a']
+
+        if self.hdf5:
+            f = h5py.File(self._filename, "r")
+            return f.attrs['a']
+        else:
+            f="%s/%s.%05d.p00000"%(self._filename,self._field[5:],self._stepnum)
+            with open(f, "rb") as file:
+                N = np.fromfile(file, dtype=np.int32  ,count=1)[0]
+                if N==0:
+                     return 0
+                return np.fromfile(file, dtype=np.float32  ,count=1)[0]
 
     def _get_t(self):
         """
         read the physical time
         """
-        try:
-            f = h5py.File(self._filename, "r")
-            return f.attrs['t']
-        except KeyError:
-            return 0
+        if self.hdf5:
+            try:
+                f = h5py.File(self._filename, "r")
+                return f.attrs['t']
+            except KeyError:
+                return 0
+        else:
+            return None
+
+    def read(self, xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1, force=0):
+        """
+        The main reader function
+        """
+
+        if self.hdf5:
+
+            if not self._isloadded or force :
+                print("reading %s"%self._field)
+
+                f = h5py.File(self._filename, "r")
+                self.data=f['data'][:]
+                f.close()
+
+                self._isloadded=True
+            else:
+                print("%s allready loaded, use force=1 to reload"%self._field)
+
+        else:
+             self._read_bin(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax,zmin=zmin,zmax=zmax, force=force)
 
     def _read1proc(self,filename):
         with open(filename, "rb") as file:
@@ -177,7 +220,8 @@ class Field():
             if N==0:
                  return 0,0,[],[]
             tsim = np.fromfile(file, dtype=np.float32  ,count=1)[0]
-# !!! Temporary fix !!!
+
+# # !!! Temporary fix !!!
             if "grid" in filename:
                 bound= np.fromfile(file, dtype=np.float32  ,count=6)
             elif "part" in filename:
@@ -186,7 +230,9 @@ class Field():
                 bound=np.array([0,1,0,1,0,1])
             else:
                 print("problem in reading field")
-# !!! end of temporary fix!!!
+# # !!! end of temporary fix!!!
+
+            # bound=np.array([0,1,0,1,0,1])
 
             bx= bound[0]>self._xmax or bound[1]<self._xmin
             by= bound[2]>self._ymax or bound[3]<self._ymin
@@ -195,13 +241,27 @@ class Field():
             if bx or by or bz :
                 return 0,tsim,bound,[]
             else:
+                # print("reading %s "%filename)
                 data = np.fromfile(file, dtype=np.float32)
                 return N,tsim,bound,data
 
-    def _read_old(self, xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1, force=0):
+
+    def _getnproc(self):
+
+        self.nproc=0
+        try:
+            self.files = os.listdir(self._filename)
+            for file in self.files:
+                if self._field[5:] in file :
+                    self.nproc += 1
+        except FileNotFoundError:
+            pass
+
+    def _read_bin(self, xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1, force=0):
 
         if not self._isloadded or force :
             print("reading %s"%self._field)
+
             self._xmin=xmin
             self._xmax=xmax
             self._ymin=ymin
@@ -213,8 +273,10 @@ class Field():
             self.data=[]
             self._bound=[]
 
-            for proc in range(getnproc(self._field_folder)):
-                cur_name = self._filename + ".p"+ str(proc).zfill(5)
+            self._getnproc()
+
+            for proc in range(self.nproc):
+                cur_name = "%s/%s.%05d.p%s"%(self._filename, self._field[5:] , self._stepnum, str(proc).zfill(5))
                 N1proc,tsim,bound1proc,data1proc=self._read1proc(cur_name)
                 self._N+=N1proc
                 self._tsim=tsim

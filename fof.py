@@ -516,28 +516,30 @@ class Fof:
         with open(name, 'wb') as output:
             pickle.dump(self.R200, output,-1)
 
-    def get_stars(self, force=0):
-        self._get_Part(self.step.star,"stars",force=force)
+    def get_stars(self, force=0, fact=1., Rmin=None):
+        self._get_Sphere(self.step.star,"stars",force=force, fact=fact)
 
-        
-    def get_part_LSS(self,part, R, force=0):
+
+    def get_part(self, force=0, fact=1., Rmin=None):
+        self._get_Sphere(self.step.part,"part", force=force, fact=fact)
+
+    def get_cells(self, force=0, fact=1., Rmin=None):
+        self._get_Sphere(self.step.grid,"cells", force=force, fact=fact)
+
+	def get_part_LSS(self,part, R, force=0):
         """ 
         Return DM part in a Radius R, 
         Usefull to compute Large Scale Structure Overdensity
-        """
-        self._get_Part(part,"part_LSS", R=R, force=force)
+		"""
+		self._get_Sphere(part,"part_LSS", R=R, force=force)
 
-    def get_part(self, force=0):
-        self._get_Part(self.step.part,"part", force=force)
+    def _get_Sphere(self,part, type,force=0, fact=1., Rmin=None):
 
-
-    def _get_Part(self,part, type, R=[], force=0):
         """
         get part in R200
         Or in radius R if not empty
         """
 
-        force=1
         name = self.path+type
         if os.path.isfile(name) and not force:
             with open(name, 'rb') as input:
@@ -552,10 +554,18 @@ class Fof:
         except AttributeError:
             return
 
+        if type == "cells":
+            #get the center of cells
+            dx=np.power(0.5,part.l.data+1)
+            x+=dx
+            y+=dx
+            z+=dx
+
         tree = spatial.cKDTree( np.transpose( [x,y,z] ))
 
         n=self.nfoftot
         part=np.empty(n, dtype=np.object)
+
 
         comptBound = 0
         
@@ -568,6 +578,11 @@ class Fof:
                 r=self.R200[i]
             else:
                 r=R
+
+
+            if Rmin is not None and r<Rmin:
+                N_halo_smaller_than_Rmin+=1
+                r=Rmin
 
 
             part[i]=tree.query_ball_point((x,y,z), r)
@@ -604,27 +619,8 @@ class Fof:
                 comptBound += 1
                 part[i].append(bound)
                 
-        #print( comptBound )
+        	#print( comptBound )
 
-
-            # Boundary conditions
-            # bound=[]
-            # if x-r<0:
-            #     bound.append(tree.query_ball_point((x+1.,y,z), r))
-            # if x+r>1:
-            #     bound.append(tree.query_ball_point((x-1.,y,z), r))
-            # if y-r<0:
-            #     bound.append(tree.query_ball_point((x,y+1.,z), r))
-            # if y+r>1:
-            #     bound.append(tree.query_ball_point((x,y-1.,z), r))
-            # if z-r<0:
-            #     bound.append(tree.query_ball_point((x,y,z+1.), r))
-            # if z+r>1:
-            #     bound.append(tree.query_ball_point((x,y,z-1.), r))
-            #
-            #     if len(bound):
-            #         print(bound)
-            #         part[i].append(bound)
 
         with open(name, 'wb') as output:
             pickle.dump(part, output,-1)
@@ -741,17 +737,19 @@ class Fof:
             if len(self.stars[i])>0:
                 self.getStars[i]=True
 
-    def get_getYoungStars(self,star,age_max):
+    def get_getYoungStars(self,age_max):
         """
         Check if halo get stars of age lower than age_max
         """
+        star=self.step.star
 
         n=self.nfoftot
         self.getYoungStars=np.zeros(n, dtype=np.bool)
         for i in range(self.nfoftot):
             if self.getStars[i]:
 
-                t=np.max(star.age.data)
+                # t=np.max(star.age.data)
+                t=self.step.t
                 youngest_stars = np.min(t- star.age.data[self.stars[i]])
                 if youngest_stars <= age_max:
                     self.getYoungStars[i] = True
@@ -775,6 +773,7 @@ class Fof:
                 if youngest_stars.size:
                     self.instSF[i] = star.mass.data[ self.stars[i] ][youngest_stars].sum()/1.9891e30*info.unit_mass / age_max
                     #self.instSF[i] = star.mass.data[self.stars[i]].sum()
+
 
     def get_cells(self,force=0,fact=1.):
         """
@@ -821,6 +820,8 @@ class Fof:
 
         with open(name, 'wb') as output:
             pickle.dump(self.cells, output,-1)
+
+
 
     def get_cells_fine(self,force=0):
         """
@@ -877,22 +878,19 @@ class Fof:
         from pyemma import io
         info = io.Info(self.path+"../../../")
 
+        part_mass=np.zeros(self.nfoftot)
+
         if type == "star_mass":
             partID = self.stars
-            part_mass=np.zeros(self.nfoftot)
             for i in range(self.nfoftot):
                 part_mass[i]=np.sum(part.mass.data[partID[i]])
-            part_mass = part_mass/1.9891e30*info.unit_mass
-            setattr(self,type,part_mass)
 
         if type == "part_mass":
-
             partID = self.part
-            unit_mass=2**(-3*self.lmin)
-
-            part_mass=np.zeros(self.nfoftot)
+            unit_mass=2**(-3*self.lmin) * (1.-info.ob/info.om)
             for i in range(self.nfoftot):
                 part_mass[i]=unit_mass*len(partID[i])
+
             part_mass = part_mass/1.9891e30*info.unit_mass
             setattr(self,type,part_mass)
             
@@ -1225,7 +1223,7 @@ class Fof:
 # FLUX AT R200
 ####################################################################################################################
 
-    def get_flux_r200(self,type,fact=1,force=0,getonly=0):
+    def get_flux_r200(self,type,fact=1,force=0,getonly=0, Rmin=None):
         """
         type could be : hydro, rad, ref
 
@@ -1241,6 +1239,7 @@ class Fof:
                 setattr(self,"flux_data_%s_%s"%(type,fact_name),pickle.load(input))
                 setattr(self,"tot_flux_%s_%s"%(type,fact_name),pickle.load(input))
             return
+
 
         #healpix shere
         import healpy as hp
@@ -1267,8 +1266,8 @@ class Fof:
 
         tree = spatial.cKDTree( np.transpose( [x,y,z] ))
 
-
         skipped = 0
+        N_halo_smaller_than_Rmin=0
         for halo_num in range(self.nfoftot):
         # for halo_num in range(100):
             if not halo_num%(1000):
@@ -1279,6 +1278,13 @@ class Fof:
             yc =self.y[halo_num]
             zc =self.z[halo_num]
             R200=self.R200[halo_num]
+
+            if Rmin is not None:
+                if R200<Rmin:
+                    N_halo_smaller_than_Rmin+=1
+                    R200=Rmin
+
+
             # cells = self.cells[halo_num]
             #
             # # skip halo smaller than ncells_min
@@ -1291,11 +1297,12 @@ class Fof:
             # # if (np.min(grid.l.data[cells])<l_min):
             # #     skipped +=1
             # #     continue
-            #
-            # # skip boundary conditions
-            # if (xc+R200 >1.) | (xc-R200 <0.) | \
-            #    (yc+R200 >1.) | (yc-R200 <0.) | \
-            #    (zc+R200 >1.) | (zc-R200 <0.):
+
+
+            # skip boundary conditions
+            # if (xc+R200 >=1.) | (xc-R200 <0.) | \
+            #    (yc+R200 >=1.) | (yc-R200 <0.) | \
+            #    (zc+R200 >=1.) | (zc-R200 <0.):
             #     skipped +=1
             #     continue
             #
@@ -1316,6 +1323,7 @@ class Fof:
             yp=yc+y_healpix*fact*R200
             zp=zc+z_healpix*fact*R200
             idx = tree.query(np.transpose((xp,yp,zp)))[1]
+
 
             # Select the flux
             if type == "hydro":
@@ -1342,12 +1350,16 @@ class Fof:
                 fz=grid.field_w.data[idx]-self.mean_vel[halo_num][2]
 
 
-            # if type == "rad":
-            #     # radiative flux
-            #     fx=grid.rfield_fx0.data[cells]
-            #     fy=grid.rfield_fy0.data[cells]
-            #     fz=grid.rfield_fz0.data[cells]
-            #
+            if type == "rad":
+                # radiative flux
+                # fx=grid.rfield_fx0.data[cells]
+                # fy=grid.rfield_fy0.data[cells]
+                # fz=grid.rfield_fz0.data[cells]
+                fx=grid.rfield_fx0.data[idx]
+                fy=grid.rfield_fy0.data[idx]
+                fz=grid.rfield_fz0.data[idx]
+
+
             # if type == "ref":
             #     #reference flux
             #     fx=np.ones(len(cells))*3
@@ -1396,6 +1408,10 @@ class Fof:
 
         print("skipped %d/%d = %.02f %%"%(skipped,self.nfoftot, skipped/self.nfoftot*100))
 
+        if Rmin is not None:
+            print("Halos smaller than Rmin %d/%d = %.02f %% Rmin=%e"%(N_halo_smaller_than_Rmin,self.nfoftot, N_halo_smaller_than_Rmin/self.nfoftot*100, Rmin))
+
+
         setattr(self,"flux_data_%s_%s"%(type,fact_name),flux_data)
         setattr(self,"tot_flux_%s_%s"%(type,fact_name),tot_flux)
 
@@ -1407,7 +1423,7 @@ class Fof:
 
 ####################################################################################################################
 ####################################################################################################################
-    def get_instant_SFR(self, force=0):
+    def get_instant_SFR(self, force=0, tshift=None):
         """
         compute the averaged SFR over the last 10Myr by getting the mass of recent stellar particles
         """
@@ -1427,7 +1443,13 @@ class Fof:
 
         for halo_num in range(self.nfoftot):
             star_mask=self.stars[halo_num]
+
             age=ages[star_mask]
+
+            #To compute escape fraction age have to be shift by R200/c
+            if tshift is not None:
+                age-=tshift[halo_num]
+
             mass=masses[star_mask]
 
             thresh=1e7# thresh should be lower than tlife_feedback to neglect mass return
@@ -1435,6 +1457,8 @@ class Fof:
             self.instant_SFR[halo_num]=np.sum( mass[age<thresh] )
             self.instant_SFR[halo_num]*=info.unit_mass/1.9891e30
             self.instant_SFR[halo_num]/=thresh
+
+
 
     def get_instant_SFR_from_gas(self):
         """

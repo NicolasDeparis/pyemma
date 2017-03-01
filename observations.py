@@ -249,10 +249,10 @@ def xion():
 
     yerror = [-z[:,3], z[:,2]]
 
+
     plt.errorbar(x, 1.-y, xerr=None, yerr=yerror, ls='none', fmt='ko' )#, label="Fan 2006")
 
     #return x, 1.-y, None, yerror
-
 
 
     """
@@ -872,14 +872,12 @@ def baryonic_fraction(info):
     from Okamoto 2008 : http://mnras.oxfordjournals.org/content/390/3/920.full.pdf
     """
 
-    TODO
 
-    # fb = info.ob/info.om
-    #
-    # alpha = 2
-    #
-    # res= (1+ (2**(alpha/3)-1) * (M/Mc)**(-alpha)  )**(-3/alpha)
-
+    alpha = 2.
+    M=np.logspace(7,12)
+    Mc=2e8
+    res= (1.+ (2**(alpha/3.)-1.) * (M/Mc)**(-alpha)  )**(-3./alpha)
+    plt.plot(M,res,"b",lw=3)
 
 
 def stellar_mass_function(redshift):

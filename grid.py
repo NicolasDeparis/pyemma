@@ -20,7 +20,7 @@ def get_cube(x,y,z,l,map,level,type, xmin=0.,xmax=1.,ymin=0.,ymax=1.,zmin=0.,zma
         else:
             print("type should be 2d or 3d")
 
-    def get_cube_level(x,y,z,l,map,level,lmax, type):
+    def get_cube_level(x,y,z,l,map,level,lmax, type,bound):
         """
         project the data of current level on a grid
         """
@@ -28,11 +28,11 @@ def get_cube(x,y,z,l,map,level,type, xmin=0.,xmax=1.,ymin=0.,ymax=1.,zmin=0.,zma
         if level==lmax:
             mask=np.where(l>=level)[0]
             w=map[mask] * np.power(0.5,3*(l[mask]-lmax))
+
         else:
             mask=np.where(l==level)[0]
             w=map[mask]
 
-        bins_1d=np.arange(0.,1.+0.5**level,0.5**level)
 
         if type=="2d":
             """
@@ -41,7 +41,10 @@ def get_cube(x,y,z,l,map,level,type, xmin=0.,xmax=1.,ymin=0.,ymax=1.,zmin=0.,zma
             x=x[mask]
             y=y[mask]
             r= np.array((x,y)).transpose()
-            bin_edges = [bins_1d,bins_1d]
+
+            binX=np.arange(bound.xmin,bound.xmax+0.5**level,0.5**level)
+            binY=np.arange(bound.ymin,bound.ymax+0.5**level,0.5**level)
+            bin_edges = [binX,binY]
 
         elif type=="3d":
             """
@@ -51,7 +54,11 @@ def get_cube(x,y,z,l,map,level,type, xmin=0.,xmax=1.,ymin=0.,ymax=1.,zmin=0.,zma
             y=y[mask]
             z=z[mask]
             r= np.array( (x,y,z)) .transpose()
-            bin_edges = [bins_1d,bins_1d,bins_1d]
+
+            binX=np.arange(bound.xmin,bound.xmax+0.5**level,0.5**level)
+            binY=np.arange(bound.ymin,bound.ymax+0.5**level,0.5**level)
+            binZ=np.arange(bound.zmin,bound.zmax+0.5**level,0.5**level)
+            bin_edges = [binX,binY,binZ]
 
         else:
             print("type should be 2d or 3d")
@@ -60,16 +67,16 @@ def get_cube(x,y,z,l,map,level,type, xmin=0.,xmax=1.,ymin=0.,ymax=1.,zmin=0.,zma
         return h
 
 
-    def recursive_cube(x,y,z,l,map,level,lmax,type):
+    def recursive_cube(x,y,z,l,map,level,lmax,type, bound):
         """
         get the grid recursively
         """
         if level<lmax:
-            cur_map = prolong(get_cube_level(x,y,z,l,map,level,lmax,type),lmax-level,type)
-            cur_map += recursive_cube(x,y,z,l,map,level+1,lmax,type)
+            cur_map = prolong(get_cube_level(x,y,z,l,map,level,lmax,type,bound),lmax-level,type)
+            cur_map += recursive_cube(x,y,z,l,map,level+1,lmax,type, bound)
             return cur_map
         else:
-            return get_cube_level(x,y,z,l,map,level,lmax,type)
+            return get_cube_level(x,y,z,l,map,level,lmax,type, bound)
 
     #control level min
     lmin=np.min(l)
@@ -111,10 +118,25 @@ def get_cube(x,y,z,l,map,level,type, xmin=0.,xmax=1.,ymin=0.,ymax=1.,zmin=0.,zma
     l = l[mask]
     map = map[mask]
 
+    class Boundaries():
+        """Just a container for boundaries """
+        def __init__(self, xmin,xmax,ymin,ymax,zmin,zmax):
+            self.xmin=xmin
+            self.xmax=xmax
+            self.ymin=ymin
+            self.ymax=ymax
+            self.zmin=zmin
+            self.zmax=zmax
+
+    bound=Boundaries(xmin,xmax,ymin,ymax,zmin,zmax)
+
     #projection
-    cube=recursive_cube(x,y,z,l,map,lmin,level,type)
+    cube=recursive_cube(x,y,z,l,map,lmin,level,type, bound)
+
 
     if type=="2d":
-        return cube[_xmin:_xmax,_ymin:_ymax]/(_zmax-_zmin)
+        return cube/(_zmax-_zmin)
+        # return cube[_xmin:_xmax,_ymin:_ymax]/(_zmax-_zmin)
     if type=="3d":
-        return cube[_xmin:_xmax,_ymin:_ymax,_zmin:_zmax]
+        return cube
+        # return cube[_xmin:_xmax,_ymin:_ymax,_zmin:_zmax]
