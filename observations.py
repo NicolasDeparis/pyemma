@@ -16,9 +16,9 @@ def sfr1():
     [5.9, 	-1.80,	0.06, 0.06,	-1.55, 	0.06,	0.06],
     [6.8,  	-1.92,	0.06, 0.06,	-1.69, 	0.06,	0.06],
     [7.9,  	-2.23,	0.07, 0.06,	-2.08, 	0.07,	0.07],
-#     [10.4, 	-3.28,	0.36, 0.45, -3.13,	0.36,	0.45]
-        ]
-              )
+    [10.4, 	-3.28,	0.36, 0.45, -3.13,	0.36,	0.45],
+    # [10.5, 	-2.5,	0.5, 1. , -2.5,	0.5,	0.5]
+    ])
 
 
     x=z[:,0]
@@ -248,9 +248,14 @@ def xion():
     y=z[:,1]
 
     yerror = [-z[:,3], z[:,2]]
+
     plt.errorbar(x, 1.-y, xerr=None, yerr=yerror, ls='none', fmt='ko' )#, label="Fan 2006")
 
+    #return x, 1.-y, None, yerror
 
+
+
+    """
 
     ### pour les limites
     taille_erreur = 0.2 ### taille de la fleche, en dex
@@ -274,7 +279,7 @@ def xion():
     yerror3 = [ z3[:,2], (1-z3[:,1])*(10**(taille_erreur)-1) ] ### (1-z3[:,1])*(10**(taille_erreur)-1) => pour que toute les fleche est la même taille
     plt.errorbar(x3, 1.-y3, xerr=None, yerr=yerror3, ls='none', fmt='ko', lolims=True )
 
-
+    """
 
 
     """
@@ -881,7 +886,6 @@ def stellar_mass_function(redshift):
     """
     from song et al 2015
     http://arxiv.org/pdf/1507.05636v1.pdf
-
     available redshift are : 4, 5, 6, 7, 8
     """
 
@@ -985,8 +989,7 @@ def stellar_mass_function_fit():
                           (SMF_fits[3,3]/SMF_fits[3,1])*(zcen(binMs)/SMF_fits[3,1])**SMF_fits[3,2]*np.exp(-(zcen(binMs)/SMF_fits[3,1]) )*(binMs[1:]-binMs[:-1]),
                           (SMF_fits[4,3]/SMF_fits[4,1])*(zcen(binMs)/SMF_fits[4,1])**SMF_fits[4,2]*np.exp(-(zcen(binMs)/SMF_fits[4,1]) )*(binMs[1:]-binMs[:-1]),
                         ])
-    
-    
+
 def ionization_rate_gamma():
     """
     Observations of Gamma the photo-ionization rate.
@@ -1001,35 +1004,28 @@ def ionization_rate_gamma():
     ### Calverley 11
     obs_gamma2 = np.array( [ [ 5, 6 ],
                              [ -0.15, -0.84 ],
-                             [ -0.16, -0.18 ], 
-                             [  0.16, 0.18 ]] )
 
+                             [ -0.16, -0.18 ],
+                             [  0.16, 0.18 ]] )
     ### Wyithe and Bolton 11
     obs_gamma3 = np.array( [ [ 5, 6 ],
                              [ np.log10(0.47), np.log10(0.18) ],
-                             [ -0.2, -0.09 ], 
+                             [ -0.2, -0.09 ],
                              [ 0.3, 0.18 ]] )
-    
+
     plt.plot( obs_gamma[0], 10**obs_gamma[1], 'ok')
-    plt.errorbar( obs_gamma[0], 10**obs_gamma[1], 
-                 yerr=[10**obs_gamma[1] - 10**(obs_gamma[1]+obs_gamma[2]), 
+    plt.errorbar( obs_gamma[0], 10**obs_gamma[1],
+                 yerr=[10**obs_gamma[1] - 10**(obs_gamma[1]+obs_gamma[2]),
                        10**(obs_gamma[1]+obs_gamma[3]) - 10**obs_gamma[1] ],
                 fmt='none', ecolor='k' )
-
     plt.plot( obs_gamma2[0]-0.02, 10**obs_gamma2[1], 'or')
-    plt.errorbar( obs_gamma2[0]-0.02, 10**obs_gamma2[1], 
-                 yerr=[10**obs_gamma2[1] - 10**(obs_gamma2[1]+obs_gamma2[2]), 
+    plt.errorbar( obs_gamma2[0]-0.02, 10**obs_gamma2[1],
+                 yerr=[10**obs_gamma2[1] - 10**(obs_gamma2[1]+obs_gamma2[2]),
                        10**(obs_gamma2[1]+obs_gamma2[3]) - 10**obs_gamma2[1] ],
                 fmt='none', ecolor='r' )
-
     plt.plot( obs_gamma3[0]+0.02, 10**obs_gamma3[1], 'ob')
-    plt.errorbar( obs_gamma3[0]+0.02, 10**obs_gamma3[1], 
-                 yerr=[10**obs_gamma3[1] - 10**(obs_gamma3[1]+obs_gamma3[2]), 
+    plt.errorbar( obs_gamma3[0]+0.02, 10**obs_gamma3[1],
+                 yerr=[10**obs_gamma3[1] - 10**(obs_gamma3[1]+obs_gamma3[2]),
                        10**(obs_gamma3[1]+obs_gamma3[3]) - 10**obs_gamma3[1] ],
                 fmt='none', ecolor='b' )
-    
-    
-    
-    
-    
-    
+
