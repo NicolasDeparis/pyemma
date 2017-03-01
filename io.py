@@ -70,7 +70,6 @@ class Step:
 
         # scale factor
         self.a=self.grid._get_a()
-        print(self.a)
         if self.a is None:
             self.a=self.part._get_a()
 
@@ -223,7 +222,6 @@ class Field():
 # # !!! Temporary fix !!!
             if "grid" in filename:
                 bound= np.fromfile(file, dtype=np.float32  ,count=6)
-                print(bound)
             elif "part" in filename:
                 bound=np.array([0,1,0,1,0,1])
             elif "star" in filename:

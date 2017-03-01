@@ -514,13 +514,16 @@ class Fof:
         with open(name, 'wb') as output:
             pickle.dump(self.R200, output,-1)
 
-    def get_stars(self, force=0, fact=1.):
-        self._get_Part(self.step.star,"stars",force=force, fact=fact)
+    def get_stars(self, force=0, fact=1., Rmin=None):
+        self._get_Sphere(self.step.star,"stars",force=force, fact=fact)
 
-    def get_part(self, force=0, fact=1.):
-        self._get_Part(self.step.part,"part", force=force, fact=fact)
+    def get_part(self, force=0, fact=1., Rmin=None):
+        self._get_Sphere(self.step.part,"part", force=force, fact=fact)
 
-    def _get_Part(self,part, type,force=0, fact=1.):
+    def get_cells(self, force=0, fact=1., Rmin=None):
+        self._get_Sphere(self.step.grid,"cells", force=force, fact=fact)
+
+    def _get_Sphere(self,part, type,force=0, fact=1., Rmin=None):
         """
         get part in R200
         """
@@ -539,39 +542,60 @@ class Fof:
         except AttributeError:
             return
 
+        if type == "cells":
+            #get the center of cells
+            dx=np.power(0.5,part.l.data+1)
+            x+=dx
+            y+=dx
+            z+=dx
+
         tree = spatial.cKDTree( np.transpose( [x,y,z] ))
 
         n=self.nfoftot
         part=np.empty(n, dtype=np.object)
 
-        for i in range(n):
-            x=self.x[i]
-            y=self.y[i]
-            z=self.z[i]
-            r=self.R200[i]*fact
+        N_halo_smaller_than_Rmin=0
+        for i_halo in range(n):
+            x=self.x[i_halo]
+            y=self.y[i_halo]
+            z=self.z[i_halo]
+            r=self.R200[i_halo]*fact
 
-
-            part[i]=tree.query_ball_point((x,y,z), r)
-
+            if Rmin is not None and r<Rmin:
+                N_halo_smaller_than_Rmin+=1
+                r=Rmin
 
             # Boundary conditions
-            # bound=[]
-            # if x-r<0:
-            #     bound.append(tree.query_ball_point((x+1.,y,z), r))
-            # if x+r>1:
-            #     bound.append(tree.query_ball_point((x-1.,y,z), r))
-            # if y-r<0:
-            #     bound.append(tree.query_ball_point((x,y+1.,z), r))
-            # if y+r>1:
-            #     bound.append(tree.query_ball_point((x,y-1.,z), r))
-            # if z-r<0:
-            #     bound.append(tree.query_ball_point((x,y,z+1.), r))
-            # if z+r>1:
-            #     bound.append(tree.query_ball_point((x,y,z-1.), r))
-            #
-            #     if len(bound):
-            #         print(bound)
-            #         part[i].append(bound)
+            xm= (x-r)<0
+            xp= (x+r)>=1
+            xo= not(xm) and not(xp)
+
+            ym= (y-r)<0
+            yp= (y+r)>=1
+            yo= not(ym) and not(yp)
+
+            zm= (z-r)<0
+            zp= (z-r)>=1
+            zo= not(zm) and not(zp)
+
+            if xo and yo and zo:
+                part[i_halo]=np.uint(tree.query_ball_point((x,y,z), r))
+                continue
+            else:
+                c=[1,0,-1]
+                for k in range(3):
+                    for j in range(3):
+                        for i in range(3):
+                            p=(x+c[i],y+c[j],z+c[k])
+                            part_tmp=np.uint(tree.query_ball_point(p,r))
+
+                            if part[i_halo] is None:
+                                part[i_halo]=part_tmp
+                            else:
+                                part[i_halo]=np.append(part[i_halo], part_tmp)
+
+        if Rmin is not None:
+            print("Halos smaller than Rmin : ",N_halo_smaller_than_Rmin, Rmin)
 
         with open(name, 'wb') as output:
             pickle.dump(part, output,-1)
@@ -688,66 +712,84 @@ class Fof:
             if len(self.stars[i])>0:
                 self.getStars[i]=True
 
-    def get_getYoungStars(self,star,age_max):
+    def get_getYoungStars(self,age_max):
         """
         Check if halo get stars of age lower than age_max
         """
+        star=self.step.star
 
         n=self.nfoftot
         self.getYoungStars=np.zeros(n, dtype=np.bool)
         for i in range(self.nfoftot):
             if self.getStars[i]:
 
-                t=np.max(star.age.data)
+                # t=np.max(star.age.data)
+                t=self.step.t
                 youngest_stars = np.min(t- star.age.data[self.stars[i]])
                 if youngest_stars <= age_max:
                     self.getYoungStars[i] = True
 
-    def get_cells(self,force=0,fact=1.):
-        """
-        get grid cells in R200
-        """
-
-        grid=self.step.grid
-        name = self.path+"cells"
-        if os.path.isfile(name) and not force:
-            print("Reading %s"%name)
-            with open(name, 'rb') as input:
-                self.cells = pickle.load(input)
-            return
-
-        #get the center of cells
-        l=grid.l.data
-        dx=np.power(0.5,l+1)
-        x=grid.x.data+dx
-        y=grid.y.data+dx
-        z=grid.z.data+dx
-
-        tree = spatial.cKDTree( np.transpose( [x,y,z] ))
-        self.cells=np.zeros(self.nfoftot,dtype=np.object)
-
-        for halo_num in range(self.nfoftot):
-            xc=self.x[halo_num]
-            yc=self.y[halo_num]
-            zc=self.z[halo_num]
-            r=self.R200[halo_num]
-            self.cells[halo_num]=tree.query_ball_point((xc,yc,zc), fact*r)
-# Boundary conditions
-            # if xc-r<0:
-            #     self.cells[halo_num].append(tree.query_ball_point((xc+1,yc,zc), r))
-            # if xc+r>1:
-            #     self.cells[halo_num].append(tree.query_ball_point((xc-1,yc,zc), r))
-            # if yc-r<0:
-            #     self.cells[halo_num].append(tree.query_ball_point((xc,yc+1,zc), r))
-            # if yc+r>1:
-            #     self.cells[halo_num].append(tree.query_ball_point((xc,yc-1,zc), r))
-            # if zc-r<0:
-            #     self.cells[halo_num].append(tree.query_ball_point((xc,yc,zc+1), r))
-            # if zc+r>1:
-            #     self.cells[halo_num].append(tree.query_ball_point((xc,yc,zc-1), r))
-
-        with open(name, 'wb') as output:
-            pickle.dump(self.cells, output,-1)
+    # def get_cells(self,force=0,fact=1.):
+    #     """
+    #     get grid cells in R200
+    #     """
+    #
+    #     grid=self.step.grid
+    #     name = self.path+"cells"
+    #     if os.path.isfile(name) and not force:
+    #         print("Reading %s"%name)
+    #         with open(name, 'rb') as input:
+    #             self.cells = pickle.load(input)
+    #         return
+    #
+    #     #get the center of cells
+    #     l=grid.l.data
+    #     dx=np.power(0.5,l+1)
+    #     x=grid.x.data+dx
+    #     y=grid.y.data+dx
+    #     z=grid.z.data+dx
+    #
+    #     tree = spatial.cKDTree( np.transpose( [x,y,z] ))
+    #     self.cells=np.zeros(self.nfoftot,dtype=np.object)
+    #
+    #     for halo_num in range(self.nfoftot):
+    #         xc=self.x[halo_num]
+    #         yc=self.y[halo_num]
+    #         zc=self.z[halo_num]
+    #         r=self.R200[halo_num]
+    #         self.cells[halo_num]=tree.query_ball_point((xc,yc,zc), fact*r)
+    #
+    #         # Boundary conditions
+    #         xm= (x-r)<0
+    #         xp= (x+r)>=1
+    #         xo= not(xm) and not(xp)
+    #
+    #         ym= (y-r)<0
+    #         yp= (y+r)>=1
+    #         yo= not(ym) and not(yp)
+    #
+    #         zm= (z-r)<0
+    #         zp= (z-r)>=1
+    #         zo= not(zm) and not(zp)
+    #
+    #         if xo and yo and zo:
+    #             self.cells[halo_num]=np.uint(tree.query_ball_point((x,y,z), r))
+    #             continue
+    #         else:
+    #             c=[1,0,-1]
+    #             for k in range(3):
+    #                 for j in range(3):
+    #                     for i in range(3):
+    #                         p=(x+c[i],y+c[j],z+c[k])
+    #                         part_tmp=np.uint(tree.query_ball_point(p,r))
+    #
+    #                         if self.cells[halo_num] is None:
+    #                             self.cells[halo_num]=part_tmp
+    #                         else:
+    #                             self.cells[halo_num]=np.append(self.cells[halo_num], part_tmp)
+    #
+    #     with open(name, 'wb') as output:
+    #         pickle.dump(self.cells, output,-1)
 
     def get_cells_fine(self,force=0):
         """
@@ -1131,7 +1173,7 @@ class Fof:
 # FLUX AT R200
 ####################################################################################################################
 
-    def get_flux_r200(self,type,fact=1,force=0,getonly=0):
+    def get_flux_r200(self,type,fact=1,force=0,getonly=0, Rmin=None):
         """
         type could be : hydro, rad, ref
 
@@ -1174,8 +1216,8 @@ class Fof:
 
         tree = spatial.cKDTree( np.transpose( [x,y,z] ))
 
-
         skipped = 0
+        N_halo_smaller_than_Rmin=0
         for halo_num in range(self.nfoftot):
         # for halo_num in range(100):
             if not halo_num%(1000):
@@ -1186,6 +1228,13 @@ class Fof:
             yc =self.y[halo_num]
             zc =self.z[halo_num]
             R200=self.R200[halo_num]
+
+            if Rmin is not None:
+                if R200<Rmin:
+                    N_halo_smaller_than_Rmin+=1
+                    R200=Rmin
+
+
             # cells = self.cells[halo_num]
             #
             # # skip halo smaller than ncells_min
@@ -1198,13 +1247,14 @@ class Fof:
             # # if (np.min(grid.l.data[cells])<l_min):
             # #     skipped +=1
             # #     continue
-            #
+
+
             # skip boundary conditions
-            if (xc+R200 >=1.) | (xc-R200 <0.) | \
-               (yc+R200 >=1.) | (yc-R200 <0.) | \
-               (zc+R200 >=1.) | (zc-R200 <0.):
-                skipped +=1
-                continue
+            # if (xc+R200 >=1.) | (xc-R200 <0.) | \
+            #    (yc+R200 >=1.) | (yc-R200 <0.) | \
+            #    (zc+R200 >=1.) | (zc-R200 <0.):
+            #     skipped +=1
+            #     continue
             #
             # # get cell size
             # l_grid = grid.l.data[cells]
@@ -1308,6 +1358,10 @@ class Fof:
 
         print("skipped %d/%d = %.02f %%"%(skipped,self.nfoftot, skipped/self.nfoftot*100))
 
+        if Rmin is not None:
+            print("Halos smaller than Rmin %d/%d = %.02f %% Rmin=%e"%(N_halo_smaller_than_Rmin,self.nfoftot, N_halo_smaller_than_Rmin/self.nfoftot*100, Rmin))
+
+
         setattr(self,"flux_data_%s_%s"%(type,fact_name),flux_data)
         setattr(self,"tot_flux_%s_%s"%(type,fact_name),tot_flux)
 
@@ -1344,7 +1398,7 @@ class Fof:
             #To compute escape fraction age have to be shift by R200/c
             if tshift is not None:
                 age-=tshift[halo_num]
-            
+
             mass=masses[star_mask]
 
             thresh=1e7# thresh should be lower than tlife_feedback to neglect mass return
