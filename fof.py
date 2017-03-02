@@ -8,7 +8,7 @@ from scipy import spatial
 
 class Fof:
 
-    def __init__(self,folder,stepnum):
+    def __init__( self, folder, stepnum, step ): ### NG: duplicate of 'step' here, memory issue ?
         #self.exec_folder = "/home/deparis/Emma/utils/pfof/"
         self.exec_folder = "/astro/home/nicolas.gillet/EMMA/utils/FOF/"
 
@@ -23,87 +23,87 @@ class Fof:
     def __getattr__(self, name):
 
         if name == 'R200':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.get_R200()
             return self.__getattribute__(name)
 
         elif name == 'lmin':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.getLmin()
             return self.__getattribute__(name)
 
         elif name == 'ob':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.getCosmo()
             return self.__getattribute__(name)
 
         elif name == 'om':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.getCosmo()
             return self.__getattribute__(name)
 
         elif name == 'nfoftot':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.getNfofTot()
             return self.__getattribute__(name)
 
         elif name == 'x':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.read_masst()
             return self.__getattribute__(name)
 
         elif name == 'y':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.read_masst()
             return self.__getattribute__(name)
 
         elif name == 'z':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.read_masst()
             return self.__getattribute__(name)
 
         elif name == 'idx':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.read_masst()
             return self.__getattribute__(name)
 
         elif name == 'npart':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.read_masst()
             return self.__getattribute__(name)
 
         elif name == 'part_n':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.read_masst()
             return self.__getattribute__(name)
 
         elif name == 'part_pos':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.read_struct()
             return self.__getattribute__(name)
 
         elif name == 'part_vel':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.read_struct()
             return self.__getattribute__(name)
 
         elif name == 'part_id':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.read_struct()
             return self.__getattribute__(name)
 
         elif name == 'nproc_sim':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.getNproc_sim()
             return self.__getattribute__(name)
 
         elif name == 'ncpu':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.getNcpu()
             return self.__getattribute__(name)
 
         elif name == 'inertia_eig_val':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.get_inertia_tensor()
             return self.__getattribute__(name)
 
@@ -113,72 +113,72 @@ class Fof:
             return self.__getattribute__(name)
 
         elif name == 'part_mass':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.get_part_mass()
             return self.__getattribute__(name)
 
         elif name == 'part_mass_fine':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.get_part_mass_fine()
             return self.__getattribute__(name)
 
         elif name == 'getStars':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.get_getStars()
             return self.__getattribute__(name)
 
         elif name == 'stars':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.get_stars()
             return self.__getattribute__(name)
 
         elif name == 'stars_fine':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.get_stars_fine()
             return self.__getattribute__(name)
 
         elif name == 'part':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.get_part()
             return self.__getattribute__(name)
 
         elif name == 'cells':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.get_cells()
             return self.__getattribute__(name)
 
         elif name == 'cells_fine':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.get_cells_fine()
             return self.__getattribute__(name)
 
         elif name == 'gas_mass':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.get_gas_mass()
             return self.__getattribute__(name)
 
         elif name == 'gas_mass_fine':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.get_gas_mass_fine()
             return self.__getattribute__(name)
 
         elif name == 'star_mass':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.get_star_mass()
             return self.__getattribute__(name)
 
         elif name == 'star_mass_fine':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.get_star_mass_fine()
             return self.__getattribute__(name)
 
         elif name == 'instant_SFR':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.get_instant_SFR()
             return self.__getattribute__(name)
 
         elif name == 'instant_SFR_from_gas':
-            print("Getting %s"%name)
+            #print("Getting %s"%name)
             self.get_instant_SFR_from_gas()
             return self.__getattribute__(name)
 
@@ -516,28 +516,35 @@ class Fof:
         with open(name, 'wb') as output:
             pickle.dump(self.R200, output,-1)
 
-    def get_stars(self, force=0, fact=1., Rmin=None):
-        self._get_Sphere(self.step.star,"stars",force=force, fact=fact)
+    ####################################################################
+    def get_stars(self, force=0, fact=1., Rmin=None, Rfixe=None ):
+        self._get_Sphere( self.step.star, "stars", force=force, fact=fact )
 
+    def get_part(self, force=0, fact=1., Rmin=None, Rfixe=None ):
+        self._get_Sphere( self.step.part, "part", force=force, fact=fact )
 
-    def get_part(self, force=0, fact=1., Rmin=None):
-        self._get_Sphere(self.step.part,"part", force=force, fact=fact)
+    def get_cells(self, force=0, fact=1., Rmin=None, Rfixe=None ):
+        self._get_Sphere( self.step.grid, "cells", force=force, fact=fact )
 
-    def get_cells(self, force=0, fact=1., Rmin=None):
-        self._get_Sphere(self.step.grid,"cells", force=force, fact=fact)
-
-	def get_part_LSS(self,part, R, force=0):
+    def get_part_LSS( self, force=0, fact=1., Rmin=None, Rfixe=None ):
         """ 
-        Return DM part in a Radius R, 
+        Return DM part in a Radius Rfixe, 
         Usefull to compute Large Scale Structure Overdensity
-		"""
-		self._get_Sphere(part,"part_LSS", R=R, force=force)
+        example R = 1 Mpc
+        """
+        self._get_Sphere( self.step.part, "part_LSS", force=force, fact=1., Rmin=None, Rfixe=None,  )
+    ####################################################################
 
-    def _get_Sphere(self,part, type,force=0, fact=1., Rmin=None):
+    def _get_Sphere( self, part, type, force=0, fact=1., Rmin=None, Rfixe=None ):
 
         """
-        get part in R200
-        Or in radius R if not empty
+        get part, stars or cells in R200
+        input: - part: object part, star or cell of a step
+               - type: string = "stars", "part", "cells" or "part_LSS"
+               - force: force the computing instead of read an already compute file
+               - fact: a multiplic factor to the R200 
+               - Rmin: minimum radius
+               - Rfixe: imposed radius of search (NG)
         """
 
         name = self.path+type
@@ -566,34 +573,33 @@ class Fof:
         n=self.nfoftot
         part=np.empty(n, dtype=np.object)
 
-
-        comptBound = 0
-        
+        comptBound = 0 ### number of halos at the border of the box
         for i in range(n):
             x=self.x[i]
             y=self.y[i]
             z=self.z[i]
-            #
-            if R==[]:
-                r=self.R200[i]
+            
+            ### classic search in R200
+            if (Rfixe is None):
+                r=self.R200[i]*fact
+            ### force search in a fixe radius R
             else:
-                r=R
-
-
-            if Rmin is not None and r<Rmin:
+                r=Rfixe
+            ### impose a minimum radius for the smallest halos
+            if (Rmin is not None) and (r<Rmin) and (Rfixe is None):
                 N_halo_smaller_than_Rmin+=1
                 r=Rmin
-
 
             part[i]=tree.query_ball_point((x,y,z), r)
             
             ### Boundary conditions
-            x_border = (x-r<0) or (x+r>1) ### is the halo at a border
+            ### NG: Most efficient way I find, do the strict minimum of tree.query_ball_point
+            x_border = (x-r<0) or (x+r>1) ### is the halo at a border ?
             y_border = (y-r<0) or (y+r>1)
             z_border = (z-r<0) or (z+r>1)
             
-            x_sign = np.sign( 0.5 - x ) ### on which side of the border ? work if r<0.5 !
-            y_sign = np.sign( 0.5 - y )
+            x_sign = np.sign( 0.5 - x ) ### on which side of the border ? work if r<0.5 ! TODO: make it general
+            y_sign = np.sign( 0.5 - y ) ### but if r>=0.5 you are doing something nasty!
             z_sign = np.sign( 0.5 - z )
             
             bound=[]
@@ -619,9 +625,9 @@ class Fof:
                 comptBound += 1
                 part[i].append(bound)
                 
-        	#print( comptBound )
+            #print( comptBound )
 
-
+        ### save ine file of the name of the type
         with open(name, 'wb') as output:
             pickle.dump(part, output,-1)
 
@@ -647,6 +653,7 @@ class Fof:
         # def get_part_fine(self,force=0):
         #     """
         #     get halo stars the fine way
+        #     NG: useless part is already part_fine! by nature of the halos finder (FOF or HOP)
         #     """
         #     grid=self.step.grid
         #     stars=self.step.part
@@ -686,9 +693,11 @@ class Fof:
         #     pickle.dump(self.stars_fine, output,-1)
 
 
-    def get_stars_fine(self,force=0):
+    def get_stars_fine( self, force=0 ):
         """
-        get halo stars the fine way
+        get halo's stars the fine way
+        find stars in each if the cells (cells_fine) of the halos
+        cells_fine: cells where DM parts of the halo are
         """
         grid=self.step.grid
         stars=self.step.star
@@ -702,9 +711,17 @@ class Fof:
         x=stars.x.data
         y=stars.y.data
         z=stars.z.data
+        ### build 3D KDtree on all stars position 
         tree = spatial.cKDTree( np.transpose( [x,y,z] ))
 
         self.stars_fine=np.empty(self.nfoftot, dtype=np.object)
+        
+        try:
+            self.cells_fine
+        except AttributeError:
+            print('Compute cell_fine')
+            self.get_cells_fine( force=force )
+        
         for i in range(self.nfoftot):
             cells = self.cells_fine[i]
 
@@ -720,6 +737,7 @@ class Fof:
 
             search=[]
             for j in range(len(cells)):
+                ### search all stars in the cell
                 search.append( tree.query_ball_point( (x[j],y[j],z[j]), r[j] ) )
 
             self.stars_fine[i]=np.int32(np.unique(np.concatenate(search)))
@@ -775,57 +793,11 @@ class Fof:
                     #self.instSF[i] = star.mass.data[self.stars[i]].sum()
 
 
-    def get_cells(self,force=0,fact=1.):
+
+
+    def get_cells_fine( self, force=0 ):
         """
-        get grid cells in R200
-        """
-
-        grid=self.step.grid
-        name = self.path+"cells"
-        if os.path.isfile(name) and not force:
-            #print("Reading %s"%name)
-            with open(name, 'rb') as input:
-                self.cells = pickle.load(input)
-            return
-
-        #get the center of cells
-        l=grid.l.data
-        dx=np.power(0.5,l+1)
-        x=grid.x.data+dx
-        y=grid.y.data+dx
-        z=grid.z.data+dx
-
-        tree = spatial.cKDTree( np.transpose( [x,y,z] ))
-        self.cells=np.zeros(self.nfoftot,dtype=np.object)
-
-        for halo_num in range(self.nfoftot):
-            xc=self.x[halo_num]
-            yc=self.y[halo_num]
-            zc=self.z[halo_num]
-            r=self.R200[halo_num]
-            self.cells[halo_num]=tree.query_ball_point((xc,yc,zc), fact*r)
-# Boundary conditions
-            # if xc-r<0:
-            #     self.cells[halo_num].append(tree.query_ball_point((xc+1,yc,zc), r))
-            # if xc+r>1:
-            #     self.cells[halo_num].append(tree.query_ball_point((xc-1,yc,zc), r))
-            # if yc-r<0:
-            #     self.cells[halo_num].append(tree.query_ball_point((xc,yc+1,zc), r))
-            # if yc+r>1:
-            #     self.cells[halo_num].append(tree.query_ball_point((xc,yc-1,zc), r))
-            # if zc-r<0:
-            #     self.cells[halo_num].append(tree.query_ball_point((xc,yc,zc+1), r))
-            # if zc+r>1:
-            #     self.cells[halo_num].append(tree.query_ball_point((xc,yc,zc-1), r))
-
-        with open(name, 'wb') as output:
-            pickle.dump(self.cells, output,-1)
-
-
-
-    def get_cells_fine(self,force=0):
-        """
-        get grid cells of halo by associating each part to the nearest cell
+        get grid cells of halo by associating each DM part to the nearest cell
         """
 
         grid=self.step.grid
@@ -837,13 +809,14 @@ class Fof:
                 self.cells_fine = pickle.load(input)
             return
 
-        #get the center of cells
+        ###get the center of cells
         l=grid.l.data
         dx=np.power(0.5,l+1)
         x=grid.x.data+dx
         y=grid.y.data+dx
         z=grid.z.data+dx
-
+        
+        ### build 3D KD tree on all cells positions
         tree = spatial.cKDTree( np.transpose( [x,y,z] ))
 
         self.cells_fine=np.empty(self.nfoftot,dtype=np.object)
@@ -852,7 +825,7 @@ class Fof:
             xp=self.part_pos[halo_num][0::3]
             yp=self.part_pos[halo_num][1::3]
             zp=self.part_pos[halo_num][2::3]
-
+            ### find the nearest cell
             self.cells_fine[halo_num]=np.unique(tree.query(np.transpose( [xp,yp,zp] ))[1])
 
         with open(name, 'wb') as output:

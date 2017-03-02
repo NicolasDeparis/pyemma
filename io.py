@@ -4,11 +4,11 @@ import os
 import numpy as np
 import h5py
 
-import pyemma.fof as fof
+import pyemma.fof as fof 
 # import hop
 
-import optical_depth
-import movie
+#import optical_depth
+import pyemma.movie as movie
 
 class Run:
     """
@@ -49,7 +49,7 @@ class Run:
         try:
             self.movie=movie.Movie("%sdata/movie/"%self.folder)
         except FileNotFoundError:
-            print('no movie')
+            #print('no movie')
             pass
 
 
@@ -62,12 +62,12 @@ class Step:
 
         self.n=number # snap number
 
-        self.part=Fields(number,folder,"part_",hdf5) #particles
-        self.star=Fields(number,folder,"star_",hdf5) #stars
-        self.grid=Fields(number,folder,"grid_",hdf5) #AMR grid
+        self.part=Fields(number,folder,"part_",hdf5) ### particles
+        self.star=Fields(number,folder,"star_",hdf5) ### stars
+        self.grid=Fields(number,folder,"grid_",hdf5) ### AMR grid
 
 
-#        self.optical_depth=optical_depth.OpticalDepth() #Optical depth
+#        self.optical_depth=optical_depth.OpticalDepth() ###Optical depth
 
         # scale factor
         self.a=self.grid._get_a()
@@ -83,10 +83,10 @@ class Step:
         else :
             self.z=None
 
-#comment these line in case of probleme with halo finder
-
+### Comment these line in case of probleme with halo finder
 #       self.hop=hop.Hop(number,folder)
         self.fof=fof.Fof(folder,number,self)
+        #self.fof=fof.Fof(folder,number)
 
 class Fields:
     def __init__(self, number,folder, sets_type, hdf5=True):
@@ -201,7 +201,7 @@ class Field():
         if self.hdf5:
 
             if not self._isloadded or force :
-                print("reading %s"%self._field)
+                #print("reading %s"%self._field)
 
                 f = h5py.File(self._filename, "r")
                 self.data=f['data'][:]
@@ -214,7 +214,7 @@ class Field():
         else:
              self._read_bin(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax,zmin=zmin,zmax=zmax, force=force)
 
-    def _read1proc(self,filename):
+    def _read1proc( self, filename ):
         with open(filename, "rb") as file:
             N = np.fromfile(file, dtype=np.int32  ,count=1)[0]
             if N==0:
@@ -260,7 +260,7 @@ class Field():
     def _read_bin(self, xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1, force=0):
 
         if not self._isloadded or force :
-            print("reading %s"%self._field)
+            #print("reading %s"%self._field)
 
             self._xmin=xmin
             self._xmax=xmax

@@ -199,7 +199,7 @@ def getMagInFilter(_x0, spectremodeleenergparsparAngstrom, lmin, lmax):
     return mag
 
 def getModel2():
-	""" LOOK HERE """
+    """ LOOK HERE """
     age, wavelength, spectre = readStarburst()
 
     n = len(age)
