@@ -883,82 +883,70 @@ class Fof:
 ####################################################################################################################
 # Mass
 ####################################################################################################################
-
-    def get_star_mass(self):
-        self._get_Part_mass(self.step.star, type="star_mass")
-
-    def get_part_DLSS(self,part, R=[], info=[]):
-        self._get_Part_mass(part, type="part_DLSS", R=R, info=info)
-
-    def get_part_mass(self):
-        self._get_Part_mass(self.step.part, type="part_mass")
-
-    def _get_Part_mass(self,part,type, R=[], info=[] ):
-        """
-        get part mass in Mo
-        """
+  
+    ##############################################################
+    def get_star_mass( self ):
         from pyemma import io
         info = io.Info(self.path+"../../../")
-
         part_mass=np.zeros(self.nfoftot)
-
-        if type == "star_mass":
-            partID = self.stars
-            for i in range(self.nfoftot):
-                part_mass[i]=np.sum(part.mass.data[partID[i]])
-                part_mass = part_mass/1.9891e30*info.unit_mass
-                setattr(self,type,part_mass)
-
-        if type == "part_mass":
-            partID = self.part
-            unit_mass=2**(-3*self.lmin) * (1.-info.ob/info.om)
-            for i in range(self.nfoftot):
-                part_mass[i]=unit_mass*len(partID[i])
-
-            part_mass = part_mass/1.9891e30*info.unit_mass
-            setattr(self,type,part_mass)
-
-        if type == "part_DLSS":
-            partID = self.part_LSS ### get_part as to be done first
-            part_mass=np.zeros(self.nfoftot)
-            for i in range(self.nfoftot):
-                unit_mass=np.power(128.,-3)*(info.om)
-                part_mass[i]=unit_mass*len(partID[i])
-
-            Mtot = 2.**(3*info.level_min) * unit_mass/1.9891e30*info.unit_mass
-            Ltot = info.box_size_hm1_Mpc / info.H0 * 100.
-            Vtot = Ltot**3
-            V = (4./3)*np.pi * (R*Ltot)**3
-
-            part_mass = part_mass/1.9891e30*info.unit_mass / V / Mtot * Vtot
-            setattr(self,type,part_mass)
-
-    def get_part_mass_fine(self):
-        """
-        get halo mass in Mo
-        """
-
-        nptot=2**(3*self.lmin)
-        part_mass=(1.-self.ob/self.om)/(nptot)
-
-        Mo = self.unit_mass/1.9891e30
-        self.part_mass_fine=self.npart*part_mass*Mo
-
-    def get_star_mass_fine(self):
-        """
-        get halo star mass in Mo
-        """
-
-        star=self.step.star
-
+        
+        partID = self.stars   
+        unit_mass = 1. / 1.9891e30 * info.unit_mass ### TODO: chech consistency with info
+        for i in range(self.nfoftot):
+            part_mass[i] = np.sum(self.step.star.mass.data[ partID[i] ]) * unit_mass
+        self.star_mass = part_mass
+        
+    def get_star_mass_fine( self ):
         from pyemma import io
         info = io.Info(self.path+"../../../")
-
-        self.star_mass_fine=np.zeros(self.nfoftot)
+        part_mass=np.zeros(self.nfoftot)
+        
+        partID = self.stars_fine
+        unit_mass = 1. / 1.9891e30 * info.unit_mass ### TODO: chech consistency with info
         for i in range(self.nfoftot):
-            stars=self.stars_fine[i]
-            self.star_mass_fine[i]=np.sum(star.mass.data[stars])
-        self.star_mass_fine = self.star_mass_fine/1.9891e30*info.unit_mass
+            part_mass[i] = np.sum(self.step.star.mass.data[ partID[i] ]) * unit_mass
+        self.star_mass_fine = part_mass
+
+    def get_part_mass( self ):
+        from pyemma import io
+        info = io.Info(self.path+"../../../")
+        part_mass = np.zeros(self.nfoftot)
+        
+        partID = self.part
+        unit_mass = info.mass_res_DM
+        for i in range(self.nfoftot):
+            part_mass[i] = len(partID[i]) * unit_mass
+        self.part_mass = part_mass
+        
+    def get_part_mass_fine( self ):
+        from pyemma import io
+        info = io.Info(self.path+"../../../")
+        
+        unit_mass = info.mass_res_DM
+        self.part_mass_fine = self.npart * unit_mass
+        
+    def get_part_DLSS( self, R ):
+        """
+        Return the Large Scale Structure Overdensity (not a mass)
+        /!\ TODO: R should be the same than in get_part_LSS !
+        """
+        from pyemma import io
+        info = io.Info(self.path+"../../../")
+        
+        partID = self.part_LSS 
+        part_mass=np.zeros(self.nfoftot)
+        
+        unit_mass = info.mass_res_DM
+        
+        Mtot = 2.**(3*info.level_min) * unit_mass ### total DM mass of the simu
+        Ltot = info.box_size_hm1_Mpc / info.H0 * 100. ### side size of the box
+        Vtot = Ltot**3 ### volume of the simulation
+        V = (4./3)*np.pi * (R*Ltot)**3 ### spherical volue arround halos
+        
+        for i in range(self.nfoftot): 
+            part_mass[i]=unit_mass*len(partID[i])     
+        selfpart_DLSS = part_mass
+    ##############################################################
 
     def get_gas_mass(self):
         """
