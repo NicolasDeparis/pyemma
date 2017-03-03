@@ -8,7 +8,7 @@ from scipy import spatial
 
 class Fof:
 
-    def __init__( self, folder, stepnum, step ): ### NG: duplicate of 'step' here, memory issue ?
+    def __init__( self, folder, stepnum, step, verbose=False ): ### NG: duplicate of 'step' here, memory issue ?
         #self.exec_folder = "/home/deparis/Emma/utils/pfof/"
         self.exec_folder = "/astro/home/nicolas.gillet/EMMA/utils/FOF/"
 
@@ -20,165 +20,202 @@ class Fof:
         self._isLoaded_struct = False
         self.step=step
 
+        self._verbose=verbose
+
+    def set_verbose(self, verbose):
+        self._verbose=verbose
+
     def __getattr__(self, name):
 
         if name == 'R200':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.get_R200()
             return self.__getattribute__(name)
 
         elif name == 'lmin':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.getLmin()
             return self.__getattribute__(name)
 
         elif name == 'ob':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.getCosmo()
             return self.__getattribute__(name)
 
         elif name == 'om':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.getCosmo()
             return self.__getattribute__(name)
 
         elif name == 'nfoftot':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.getNfofTot()
             return self.__getattribute__(name)
 
         elif name == 'x':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.read_masst()
             return self.__getattribute__(name)
 
         elif name == 'y':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.read_masst()
             return self.__getattribute__(name)
 
         elif name == 'z':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.read_masst()
             return self.__getattribute__(name)
 
         elif name == 'idx':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.read_masst()
             return self.__getattribute__(name)
 
         elif name == 'npart':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.read_masst()
             return self.__getattribute__(name)
 
         elif name == 'part_n':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.read_masst()
             return self.__getattribute__(name)
 
         elif name == 'part_pos':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.read_struct()
             return self.__getattribute__(name)
 
         elif name == 'part_vel':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.read_struct()
             return self.__getattribute__(name)
 
         elif name == 'part_id':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.read_struct()
             return self.__getattribute__(name)
 
         elif name == 'nproc_sim':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.getNproc_sim()
             return self.__getattribute__(name)
 
         elif name == 'ncpu':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.getNcpu()
             return self.__getattribute__(name)
 
         elif name == 'inertia_eig_val':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.get_inertia_tensor()
             return self.__getattribute__(name)
 
         elif name == 'inertia_eig_vec':
-            print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.get_inertia_tensor()
             return self.__getattribute__(name)
 
         elif name == 'part_mass':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.get_part_mass()
             return self.__getattribute__(name)
 
         elif name == 'part_mass_fine':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.get_part_mass_fine()
             return self.__getattribute__(name)
 
         elif name == 'getStars':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.get_getStars()
             return self.__getattribute__(name)
 
         elif name == 'stars':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.get_stars()
             return self.__getattribute__(name)
 
         elif name == 'stars_fine':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.get_stars_fine()
             return self.__getattribute__(name)
 
         elif name == 'part':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.get_part()
             return self.__getattribute__(name)
 
         elif name == 'cells':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.get_cells()
             return self.__getattribute__(name)
 
         elif name == 'cells_fine':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.get_cells_fine()
             return self.__getattribute__(name)
 
         elif name == 'gas_mass':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.get_gas_mass()
             return self.__getattribute__(name)
 
         elif name == 'gas_mass_fine':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.get_gas_mass_fine()
             return self.__getattribute__(name)
 
         elif name == 'star_mass':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.get_star_mass()
             return self.__getattribute__(name)
 
         elif name == 'star_mass_fine':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.get_star_mass_fine()
             return self.__getattribute__(name)
 
         elif name == 'instant_SFR':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.get_instant_SFR()
             return self.__getattribute__(name)
 
         elif name == 'instant_SFR_from_gas':
-            #print("Getting %s"%name)
+            if self._verbose:
+                print("Getting %s"%name)
             self.get_instant_SFR_from_gas()
             return self.__getattribute__(name)
 
@@ -527,8 +564,8 @@ class Fof:
         self._get_Sphere( self.step.grid, "cells", force=force, fact=fact )
 
     def get_part_LSS( self, force=0, fact=1., Rmin=None, Rfixe=None ):
-        """ 
-        Return DM part in a Radius Rfixe, 
+        """
+        Return DM part in a Radius Rfixe,
         Usefull to compute Large Scale Structure Overdensity
         example R = 1 Mpc
         """
@@ -542,7 +579,7 @@ class Fof:
         input: - part: object part, star or cell of a step
                - type: string = "stars", "part", "cells" or "part_LSS"
                - force: force the computing instead of read an already compute file
-               - fact: a multiplic factor to the R200 
+               - fact: a multiplic factor to the R200
                - Rmin: minimum radius
                - Rfixe: imposed radius of search (NG)
         """
@@ -578,7 +615,7 @@ class Fof:
             x=self.x[i]
             y=self.y[i]
             z=self.z[i]
-            
+
             ### classic search in R200
             if (Rfixe is None):
                 r=self.R200[i]*fact
@@ -591,17 +628,17 @@ class Fof:
                 r=Rmin
 
             part[i]=tree.query_ball_point((x,y,z), r)
-            
+
             ### Boundary conditions
             ### NG: Most efficient way I find, do the strict minimum of tree.query_ball_point
             x_border = (x-r<0) or (x+r>1) ### is the halo at a border ?
             y_border = (y-r<0) or (y+r>1)
             z_border = (z-r<0) or (z+r>1)
-            
+
             x_sign = np.sign( 0.5 - x ) ### on which side of the border ? work if r<0.5 ! TODO: make it general
             y_sign = np.sign( 0.5 - y ) ### but if r>=0.5 you are doing something nasty!
             z_sign = np.sign( 0.5 - z )
-            
+
             bound=[]
             if x_border:
                 bound.append(tree.query_ball_point((x+x_sign,y,z), r))
@@ -609,22 +646,22 @@ class Fof:
                 bound.append(tree.query_ball_point((x,y+y_sign,z), r))
             if z_border:
                 bound.append(tree.query_ball_point((x,y,z+z_sign), r))
-              
+
             if x_border and y_border:
                 bound.append(tree.query_ball_point((x+x_sign,y+y_sign,z), r))
             if x_border and z_border:
                 bound.append(tree.query_ball_point((x+x_sign,y,z+z_sign), r))
             if y_border and z_border:
                 bound.append(tree.query_ball_point((x,y+y_sign,z+z_sign), r))
-             
+
             if x_border and y_border and z_border:
                 bound.append(tree.query_ball_point((x+x_sign,y+y_sign,z+z_sign), r))
-               
+
             if len(bound):
                 #print(bound)
                 comptBound += 1
                 part[i].append(bound)
-                
+
             #print( comptBound )
 
         ### save ine file of the name of the type
@@ -711,17 +748,17 @@ class Fof:
         x=stars.x.data
         y=stars.y.data
         z=stars.z.data
-        ### build 3D KDtree on all stars position 
+        ### build 3D KDtree on all stars position
         tree = spatial.cKDTree( np.transpose( [x,y,z] ))
 
         self.stars_fine=np.empty(self.nfoftot, dtype=np.object)
-        
+
         try:
             self.cells_fine
         except AttributeError:
             print('Compute cell_fine')
             self.get_cells_fine( force=force )
-        
+
         for i in range(self.nfoftot):
             cells = self.cells_fine[i]
 
@@ -771,7 +808,7 @@ class Fof:
                 youngest_stars = np.min(t- star.age.data[self.stars[i]])
                 if youngest_stars <= age_max:
                     self.getYoungStars[i] = True
-                    
+
     def get_instSF(self,star,age_max):
         """
         Check if halo get stars of age lower than age_max
@@ -779,11 +816,11 @@ class Fof:
         """
         from pyemma import io
         info = io.Info(self.path+"../../../")
-        
+
         n=self.nfoftot
         self.instSF=np.zeros(n, dtype=np.float)
         t=np.max(star.age.data)
-        
+
         for i in range(self.nfoftot):
             if self.getStars[i]:
 
@@ -815,7 +852,7 @@ class Fof:
         x=grid.x.data+dx
         y=grid.y.data+dx
         z=grid.z.data+dx
-        
+
         ### build 3D KD tree on all cells positions
         tree = spatial.cKDTree( np.transpose( [x,y,z] ))
 
@@ -837,7 +874,7 @@ class Fof:
 
     def get_star_mass(self):
         self._get_Part_mass(self.step.star, type="star_mass")
-        
+
     def get_part_DLSS(self,part, R=[], info=[]):
         self._get_Part_mass(part, type="part_DLSS", R=R, info=info)
 
@@ -866,19 +903,19 @@ class Fof:
 
             part_mass = part_mass/1.9891e30*info.unit_mass
             setattr(self,type,part_mass)
-            
+
         if type == "part_DLSS":
             partID = self.part_LSS ### get_part as to be done first
             part_mass=np.zeros(self.nfoftot)
             for i in range(self.nfoftot):
                 unit_mass=np.power(128.,-3)*(info.om)
                 part_mass[i]=unit_mass*len(partID[i])
-                
+
             Mtot = 2.**(3*info.level_min) * unit_mass/1.9891e30*info.unit_mass
             Ltot = info.box_size_hm1_Mpc / info.H0 * 100.
             Vtot = Ltot**3
             V = (4./3)*np.pi * (R*Ltot)**3
-            
+
             part_mass = part_mass/1.9891e30*info.unit_mass / V / Mtot * Vtot
             setattr(self,type,part_mass)
 
@@ -974,7 +1011,7 @@ class Fof:
         t=time.a2t_quad(cur_step.a, info.om, info.H0)
         luminosity.get_all_flux_1600(cur_step.star,t,info.unit_mass, model=model)
         flux = cur_step.star.flux_1600
-        
+
         fe = fesc
         flux *= fe
         #print("WARNING applying escape fraction of %.2f"%fe)

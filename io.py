@@ -4,7 +4,7 @@ import os
 import numpy as np
 import h5py
 
-import pyemma.fof as fof 
+import pyemma.fof as fof
 # import hop
 
 #import optical_depth
@@ -17,13 +17,14 @@ class Run:
     look for subfolder of data/ with name convertible into int
     """
 
-    def __init__(self,folder, hdf5=True):
+    def __init__(self,folder, hdf5=True, verbose=False):
 
 
         self.folder=folder
         self._data_folder=folder+"data/"
         self.step_list=[]
         self.nstep=0
+        self.verbose=verbose
 
         self._hdf5 = hdf5
 
@@ -34,7 +35,7 @@ class Run:
                 continue
 
             key="step_%05d"%stepnum
-            val= Step(stepnum, self._data_folder, hdf5)
+            val= Step(stepnum, self._data_folder, hdf5, verbose=verbose)
             setattr(self,key,val)
 
             self.step_list.append(val)
@@ -43,18 +44,20 @@ class Run:
         try:
             self.param=Param(self.folder)
         except FileNotFoundError:
-            print('no param')
+            if self.verbose:
+                print('no param')
             pass
 
         try:
             self.movie=movie.Movie("%sdata/movie/"%self.folder)
         except FileNotFoundError:
-            #print('no movie')
+            if self.verbose:
+                print('no movie')
             pass
 
 
 class Step:
-    def __init__(self,number,folder, hdf5=True):
+    def __init__(self,number,folder, hdf5=True, verbose=False):
         """
         Step object
         Contain all the data associated to an output time step
@@ -85,7 +88,7 @@ class Step:
 
 ### Comment these line in case of probleme with halo finder
 #       self.hop=hop.Hop(number,folder)
-        self.fof=fof.Fof(folder,number,self)
+        self.fof=fof.Fof(folder,number,self, verbose=verbose)
         #self.fof=fof.Fof(folder,number)
 
 class Fields:
@@ -311,7 +314,7 @@ class RunParam:
     Reader for param.run
     """
     def __init__(self,folder):
-        filename = "%s%s"%(folder,"param.run")
+        filename = "%s%s"%(folder,"data/param.run")
         with open(filename) as f:
             for line in f:
                 if line[0]!="#":
