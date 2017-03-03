@@ -719,7 +719,7 @@ class Fof:
         try:
             self.cells_fine
         except AttributeError:
-            print('Compute cell_fine')
+            #print('Have to compute cell_fine')
             self.get_cells_fine( force=force )
         
         for i in range(self.nfoftot):
@@ -749,7 +749,6 @@ class Fof:
         """
         get halo with stars
         """
-
         self.getStars=np.zeros(self.nfoftot, dtype=np.bool)
         for i in range(self.nfoftot):
             if len(self.stars[i])>0:
@@ -816,6 +815,7 @@ class Fof:
         y=grid.y.data+dx
         z=grid.z.data+dx
         
+        #print('Compute cell_fine')
         ### build 3D KD tree on all cells positions
         tree = spatial.cKDTree( np.transpose( [x,y,z] ))
 
