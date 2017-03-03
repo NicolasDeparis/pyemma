@@ -556,6 +556,8 @@ class Fof:
     ####################################################################
     def get_stars(self, force=0, fact=1., Rmin=None, Rfixe=None ):
         self._get_Sphere( self.step.star, "stars", force=force, fact=fact )
+        
+        self.get_getStars(  ) ### NG : autant le mettre la, c'est plus coherent
 
     def get_part(self, force=0, fact=1., Rmin=None, Rfixe=None ):
         self._get_Sphere( self.step.part, "part", force=force, fact=fact )
@@ -682,7 +684,7 @@ class Fof:
         # def get_part_fine(self,force=0):
         #     """
         #     get halo stars the fine way
-        #     NG: useless part is already part_fine! by nature of the halos finder (FOF or HOP)
+        #     NG: useless, 'part' is already part_fine! by nature of the halos finder (FOF or HOP)
         #     """
         #     grid=self.step.grid
         #     stars=self.step.part
@@ -735,6 +737,7 @@ class Fof:
             #print("Reading %s"%name)
             with open(name, 'rb') as input:
                 self.stars_fine = pickle.load(input)
+            self._get_getStars_fine(  )
             return
 
         x=stars.x.data
@@ -744,9 +747,10 @@ class Fof:
         tree = spatial.cKDTree( np.transpose( [x,y,z] ))
 
         self.stars_fine=np.empty(self.nfoftot, dtype=np.object)
-
+        
+        ### NG: plutot que de devoir creer cells_fine avant, autant qu'il soit creer automatiquement. 
         try:
-            self.cells_fine
+            self.cells_fine ### NG: JE NE SUIS PAS SUR DE L'EFFICACITE DE SE TRY/EXCEPT 
         except AttributeError:
             #print('Have to compute cell_fine')
             self.get_cells_fine( force=force )
@@ -770,18 +774,34 @@ class Fof:
                 search.append( tree.query_ball_point( (x[j],y[j],z[j]), r[j] ) )
 
             self.stars_fine[i]=np.int32(np.unique(np.concatenate(search)))
-
+            
+        self._get_getStars_fine(  )   
+        
         with open(name, 'wb') as output:
             pickle.dump(self.stars_fine, output,-1)
 
     def get_getStars(self):
         """
         get halo with stars
+        NG: this function should be directly call when get_stars is computed
         """
-        self.getStars=np.zeros(self.nfoftot, dtype=np.bool)
-        for i in range(self.nfoftot):
-            if len(self.stars[i])>0:
-                self.getStars[i]=True
+        #self.getStars=np.zeros(self.nfoftot, dtype=np.bool)
+        #for i in range(self.nfoftot):
+        #    if len(self.stars[i])>0:
+        #        self.getStars[i]=True
+                
+        self.getStars = np.array( [ len( self.stars[i] )>0 for i in range(self.nfoftot) ] )      
+            
+    def _get_getStars_fine(self):
+        """
+        get halo with stars_fine
+        NG: this function should be directly call when get_stars_fine is computed
+        """
+        #self.getStars_fine=np.zeros(self.nfoftot, dtype=np.bool)
+        #for i in range(self.nfoftot):
+        #    if len(self.stars_fine[i])>0:
+        #        self.getStars_fine[i]=True
+        self.getStars_fine = np.array( [ len( self.stars_fine[i] )>0 for i in range(self.nfoftot) ] )      
 
     def get_getYoungStars(self,age_max):
         """
