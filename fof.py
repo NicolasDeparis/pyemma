@@ -313,8 +313,8 @@ class Fof:
         Find coarse level by reading param.run
         """
         from pyemma import io
-        #runparam = io.RunParam(self.folder+"../")
-        runparam = io.RunParam(self.folder)
+        runparam = io.RunParam(self.folder+"../")
+        # runparam = io.RunParam(self.folder)
         self.lmin=runparam.level_coarse
 
     def getCosmo(self):
@@ -639,30 +639,22 @@ class Fof:
             y_sign = np.sign( 0.5 - y ) ### but if r>=0.5 you are doing something nasty!
             z_sign = np.sign( 0.5 - z )
 
-            bound=[]
             if x_border:
-                bound.append(tree.query_ball_point((x+x_sign,y,z), r))
+                part[i]+=tree.query_ball_point((x+x_sign,y,z), r)
             if y_border:
-                bound.append(tree.query_ball_point((x,y+y_sign,z), r))
+                part[i]+=tree.query_ball_point((x,y+y_sign,z), r)
             if z_border:
-                bound.append(tree.query_ball_point((x,y,z+z_sign), r))
+                part[i]+=tree.query_ball_point((x,y,z+z_sign), r)
 
             if x_border and y_border:
-                bound.append(tree.query_ball_point((x+x_sign,y+y_sign,z), r))
+                part[i]+=tree.query_ball_point((x+x_sign,y+y_sign,z), r)
             if x_border and z_border:
-                bound.append(tree.query_ball_point((x+x_sign,y,z+z_sign), r))
+                part[i]+=tree.query_ball_point((x+x_sign,y,z+z_sign), r)
             if y_border and z_border:
-                bound.append(tree.query_ball_point((x,y+y_sign,z+z_sign), r))
+                part[i]+=tree.query_ball_point((x,y+y_sign,z+z_sign), r)
 
             if x_border and y_border and z_border:
-                bound.append(tree.query_ball_point((x+x_sign,y+y_sign,z+z_sign), r))
-
-            if len(bound):
-                #print(bound)
-                comptBound += 1
-                part[i].append(bound)
-
-            #print( comptBound )
+                part[i]+=tree.query_ball_point((x+x_sign,y+y_sign,z+z_sign), r)
 
         ### save ine file of the name of the type
         with open(name, 'wb') as output:
@@ -894,6 +886,8 @@ class Fof:
             partID = self.stars
             for i in range(self.nfoftot):
                 part_mass[i]=np.sum(part.mass.data[partID[i]])
+                part_mass = part_mass/1.9891e30*info.unit_mass
+                setattr(self,type,part_mass)
 
         if type == "part_mass":
             partID = self.part
