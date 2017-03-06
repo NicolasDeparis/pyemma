@@ -13,6 +13,13 @@ def flux2mag(flux):
     return mag
 
 def readStarburst_old(convert=False, filename=''):
+    """
+    Reader for Starburst99 fig7e.dat file
+    
+    time [y]
+    wavelenght [A]
+    spectrum [erg.s-1.A-1]
+    """
 
     if( filename=='' ):
         filename="/astro/home/nicolas.gillet/WORK/analyse_simu/fig7e.dat"
@@ -38,6 +45,14 @@ def readStarburst_old(convert=False, filename=''):
     return age,data[0], data[1:]
 
 def readStarburst(filename=''):
+    """
+    Reader for Starburst99 TH_AUBERT.spectrum1 file
+    Files return by a 'personnal' Starburst simulation
+    
+    time [y]
+    wavelenght [A]
+    spectrum [erg.s-1.A-1]
+    """
 
     # file = "../jupyter/Starburst99/Salpeter/SALP_AUBERT.spectrum1"
     # file = "../jupyter/Starburst99/Topheavy/TH_AUBERT.spectrum1"
@@ -62,6 +77,7 @@ def readStarburst(filename=''):
 def readBPASS(filename=''):
     """
     read BPASS spectrum
+    
     time [y]
     wavelenght [A]
     spectrum [erg.s-1.A-1]
@@ -79,11 +95,11 @@ def readBPASS(filename=''):
     time = 10**( 6 +0.1*np.linspace( 0, spectrum.shape[0], spectrum.shape[0] ) )
     
     return time, wavelenght, spectrum
-    
-    
 
 def getM1600_old(_x0, spectremodeleenergparsparAngstrom):
     """
+    DEPRECATED: see getMagInFilter
+    
     Pour calculer M1600 pour un spectre modèle défini par spectremodeleenergparsparAngstrom
     et ses songeurs d’onde _x0:
 
@@ -127,6 +143,10 @@ def getM1600_old(_x0, spectremodeleenergparsparAngstrom):
 
 
 def getModel(BPASS=False, oldSB99=False, filename=''):
+    """
+    'Parser' for starPopulation files 
+    (Est ce que 'Parser est le bon mot ?')
+    """
     
     if(BPASS and not(oldSB99)):
         age, wavelength, spectre = readBPASS(filename=filename)
@@ -138,17 +158,27 @@ def getModel(BPASS=False, oldSB99=False, filename=''):
         age, wavelength, spectre = readStarburst(filename=filename)
       
     if(BPASS and oldSB99):
-        print( "choose BPASS OR SB99 file!" )
+        print( "choose BPASS OR SB99 OR nothing(=default model) file!" )
         return -1
+    
+    n = len(age)
+    modelMag = np.zeros(n)
+
+    for i in range( n ):
+        modelMag[i] = getM1600( wavelength, spectre[i] )
+
+    return  modelMag, age
 
 def getM1600(_x0, spectremodeleenergparsparAngstrom):
+    """
+    NG: pourquoi cette fonction ? et pas directement getMagInFilter ?
+    OU ajouter le filter '1600' a getMagFilter /
+    """
     lmin=1500
     lmax=1600
     return getMagInFilter(_x0, spectremodeleenergparsparAngstrom, lmin, lmax)
 
-
-
-def getMagFilter(filter):
+def getMagFilter( _x0, spectremodeleenergparsparAngstrom, filter ):
     """
     return the magnitude in a color band
 
@@ -171,6 +201,10 @@ def getMagFilter(filter):
     if filter == "z":
         lmean = 9130
         dl=950./2
+        
+    if filter == "1600":
+        lmean = 1550
+        dl = 100./2
 
     lmin=lmean-dl
     lmax=lmean+dl
@@ -179,47 +213,50 @@ def getMagFilter(filter):
 
 
 def getMagInFilter(_x0, spectremodeleenergparsparAngstrom, lmin, lmax):
-    parsec=3.08567758e16#parsec in meter
-    c=299792458 #light speed
+    """
+    return the magnitude between [lmin;lmax]
+    """
+    parsec = 3.08567758e16 ### parsec in meter
+    c = 299792458 ### light speed
 
-    F0 = 3631 #Jy reference flow
-    Jyhzcm=1.e-23 #  erg s-1 Hz-1 cm-2
-    Jyhzm=1.e-19 # erg s-1 Hz-1 m-2
-    #so for absolute mags the 0 point is Jyhzm * 4pir^2 where r = 10 pc
+    F0 = 3631 ### Jy reference flow
+    Jyhzcm=1.e-23 ###  erg s-1 Hz-1 cm-2
+    Jyhzm=1.e-19 ### erg s-1 Hz-1 m-2
+    ### so for absolute mags the 0 point is Jyhzm * 4pir^2 where r = 10 pc
 
-    AB0pointabs=F0*Jyhzm*4.*np.pi*(10.*parsec)**2; # erg/s/Hz // cause ParSec
+    AB0pointabs=F0*Jyhzm*4.*np.pi*(10.*parsec)**2; ### erg/s/Hz // cause ParSec
 
-    AB0pointref=AB0pointabs*(c*1.e10/((_x0)**2)); # in erg/s/A (thats why we have to put c in Angstrom/s)
+    AB0pointref=AB0pointabs*(c*1.e10/((_x0)**2)); ### in erg/s/A (thats why we have to put c in Angstrom/s)
 
-    mask = np.where( (_x0>=lmin) & (_x0<=lmax))#le filtre vaut 1 entre 1500 et 1600 Angstrom
+    mask = np.where( (_x0>=lmin) & (_x0<=lmax)) ### le filtre vaut 1 entre 1500 et 1600 Angstrom
 
     mag=-2.5*np.log10(integrate.trapz(spectremodeleenergparsparAngstrom[mask],
                                           _x0[mask])/integrate.trapz(AB0pointref[mask],
                                           _x0[mask]))
     return mag
 
-def getModel2():
-    """ LOOK HERE """
-    age, wavelength, spectre = readStarburst()
-
-    n = len(age)
-    modelMag = np.zeros(n)
-
-    for i in range(n):
-        modelMag[i] = getM1600(wavelength, spectre[i])
-
-    return  modelMag, age
+#def getModel2():
+#    """ LOOK HERE """
+#    age, wavelength, spectre = readStarburst()
+#
+#    n = len(age)
+#    modelMag = np.zeros(n)
+#
+#    for i in range(n):
+#        modelMag[i] = getM1600(wavelength, spectre[i])
+#
+#    return  modelMag, age
 
 def sumMag(mass, age, modelmag, modelage):
     mags=np.interp(age,modelage,modelmag)
     res=np.sum(mass*np.power(10,-mags/2.5))
     return -2.5*np.log10(res)
 
-def get_all_flux_1600(stars,current_time,unit_mass, model='' ):
+def get_all_flux_1600( stars, current_time, unit_mass, model=None ):
     """
     get luminous flux of stars in M1600 band
     """
-    if( model=='' ):
+    if( model==None ):
         modelmag, modelage = getModel()
     else:
         modelmag, modelage = model

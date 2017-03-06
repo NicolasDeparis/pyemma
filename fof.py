@@ -6,6 +6,8 @@ import pickle
 import os
 from scipy import spatial
 
+from pyemma import io
+
 class Fof:
 
     def __init__( self, folder, stepnum, step, verbose=False ): ### NG: duplicate of 'step' here, memory issue ?
@@ -560,6 +562,7 @@ class Fof:
         self.get_getStars(  ) ### NG : autant le mettre la, c'est plus coherent
 
     def get_part(self, force=0, fact=1., Rmin=None, Rfixe=None ):
+        ### USELESS ? do we need the DM part in the R200 !!
         self._get_Sphere( self.step.part, "part", force=force, fact=fact )
 
     def get_cells(self, force=0, fact=1., Rmin=None, Rfixe=None ):
@@ -886,7 +889,10 @@ class Fof:
   
     ##############################################################
     def get_star_mass( self ):
-        from pyemma import io
+        """
+        get stellar mass of halos from stars in R200
+        """
+        #from pyemma import io
         info = io.Info(self.path+"../../../")
         part_mass=np.zeros(self.nfoftot)
         
@@ -897,7 +903,10 @@ class Fof:
         self.star_mass = part_mass
         
     def get_star_mass_fine( self ):
-        from pyemma import io
+        """
+        get stellar mass of halos from stars in halos' cells
+        """
+        #from pyemma import io
         info = io.Info(self.path+"../../../")
         part_mass=np.zeros(self.nfoftot)
         
@@ -908,7 +917,12 @@ class Fof:
         self.star_mass_fine = part_mass
 
     def get_part_mass( self ):
-        from pyemma import io
+        """
+        TODO: check if correct and duplicate from get_part_mass_fine
+        => i think sef.part is useless (DM part in R200)
+        => HalosFinder are the correct data
+        """
+        #from pyemma import io
         info = io.Info(self.path+"../../../")
         part_mass = np.zeros(self.nfoftot)
         
@@ -919,18 +933,25 @@ class Fof:
         self.part_mass = part_mass
         
     def get_part_mass_fine( self ):
-        from pyemma import io
+        """
+        get halo mass from HalosFinder number of particules
+        """
+        #from pyemma import io
         info = io.Info(self.path+"../../../")
+        part_mass = np.zeros(self.nfoftot)
         
         unit_mass = info.mass_res_DM
-        self.part_mass_fine = self.npart * unit_mass
+        part_mass[:] = self.npart * unit_mass ### long because npart has to be read in the FOF file
+        self.part_mass_fine = part_mass
         
+        # self.part_mass_fine = self.npart * unit_mass
+
     def get_part_DLSS( self, R ):
         """
         Return the Large Scale Structure Overdensity (not a mass)
         /!\ TODO: R should be the same than in get_part_LSS !
         """
-        from pyemma import io
+        #from pyemma import io
         info = io.Info(self.path+"../../../")
         
         partID = self.part_LSS 
@@ -1005,13 +1026,14 @@ class Fof:
         with open(name, 'wb') as output:
             pickle.dump(self.integ_egy, output,-1)
 
-    def get_luminosity_1600(self,cur_step, model='', fesc=1 ):
+    def get_luminosity_1600( self, cur_step, model='', fesc=1 ):
+        ### USE LUMINOSITY
         from pyemma import io,time,luminosity
 
         info = io.Info(self.path+"../../../")
 
         t=time.a2t_quad(cur_step.a, info.om, info.H0)
-        luminosity.get_all_flux_1600(cur_step.star,t,info.unit_mass, model=model)
+        luminosity.get_all_flux_1600( cur_step.star, t, info.unit_mass, model=model )
         flux = cur_step.star.flux_1600
 
         fe = fesc
@@ -1023,6 +1045,29 @@ class Fof:
             flux_tot[i]=np.sum(flux[self.stars[i]])
         self.star_flux_1600=flux_tot
         self.mag_1600=luminosity.flux2mag(flux_tot[flux_tot!=0])
+        
+    def get_luminosity_1600_2( self, model=None, fesc=1 ):
+        ### USE StarPopulationModel
+        from pyemma import io,time
+        
+        if model==None:
+            import pyemma.StarPopulationModel as SPM
+            model = SPM.SP_Model( filename='', BPASS=False, SB99_old=False )
+            
+        info = io.Info(self.path+"../../../")
+        t = time.a2t_quad( self.step.a, info.om, info.H0 )
+        
+        model.METH_get_all_flux_1600( self.step.star, t, info.unit_mass )
+        flux = self.step.star.flux_1600
+        
+        flux *= fesc
+        #print("WARNING applying escape fraction of %.2f"%fesc)
+
+        flux_tot = np.zeros(self.nfoftot) ### Flux per halos
+        for i in range(self.nfoftot):
+            flux_tot[i] = np.sum( flux[self.stars[i]] )
+        self.star_flux_1600 = flux_tot
+        self.mag_1600 = SPM.flux2mag( flux_tot[flux_tot!=0] )
 
     def get_ageLuminosity(self,cur_step):
         """
