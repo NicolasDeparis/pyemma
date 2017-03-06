@@ -639,6 +639,63 @@ def LF( redshift, F6=False ):
                               
     return mag, LF, error_sup, error_inf
 
+def reduceObservedLF( redshift, nBin=16, F6=False ):
+    """
+    Combine 'all' LF observation in ONE  
+    DATA is average in each bin, ERRORS add in quadarture
+    The combination of DATA is made in the log space!
+    
+    Add DATA in LF function
+    
+    /!\ FUNCTION NOT WORKING IF A BIN IS EMPTY! 
+    TODO: make it work whatever => use np.histogram (HISTOGRAM IS LIFE, LIFE IS GOOD)
+    """
+    ### get DATA
+    mag, LF_lin, error_sup_lin, error_inf_lin = LF( redshift, F6=F6 )
+
+    ### error in log scale
+    error_inf = np.log10(LF_lin) - np.log10( LF_lin-error_inf_lin )
+    error_sup = np.log10( LF_lin+error_sup_lin ) - np.log10(LF_lin)
+
+    # binMag = np.linspace( -23, -12.5, 15 ) ### 19 optimal
+    binMag = np.linspace( mag.min()-0.5, mag.max()+0.5, nBin ) ### 19 optimal
+    dMag = binMag[1] - binMag[0]
+
+    MAG       = np.zeros( binMag.size-1 )
+    LF_allObs = np.zeros( binMag.size-1 )
+    ERROR     = np.zeros( binMag.size-1 )
+    ERROR_inf = np.zeros( binMag.size-1 )
+    ERROR_sup = np.zeros( binMag.size-1 )
+
+    ### TODO: this loop can by simplify with np.histogram() !
+    for i in range( binMag.size-1 ):
+        magInBin = np.where( (mag>binMag[i]) * (mag<=binMag[i+1]) )[0]
+        MAG[i] = np.average( mag[magInBin] ) ### is different of the center of the bin!
+
+        ### average of log10(LF) and return directly in linear space
+        LF_allObs[i] = 10**np.average( np.log10(LF_lin[magInBin]) )
+
+        ### for sup and inf ERRORS
+
+        if( magInBin.size>1 ):
+            ### error on the mean (independent of the error on the data)
+            meanError = np.sqrt( (( np.log10(LF_lin[magInBin] / LF_allObs[i] ) )**2).sum() / (magInBin.size-1) )
+            ### error of data added in quadrature
+            ERROR_inf[i] = np.sqrt((error_inf[magInBin]**2).sum()) / (magInBin.size-1)
+            ERROR_sup[i] = np.sqrt((error_sup[magInBin]**2).sum()) / (magInBin.size-1)
+            ### error on the mean and data also added in quadrature
+            ERROR_inf[i] = np.sqrt( ERROR_inf[i]**2 + meanError**2 )
+            ERROR_sup[i] = np.sqrt( ERROR_sup[i]**2 + meanError**2 )
+
+        else:
+            ERROR_inf[i] = error_inf[magInBin]
+            ERROR_sup[i] = error_sup[magInBin]
+        ### return in the linear space of the ERRORS
+        ERROR_inf[i] = LF_allObs[i] - 10**( np.log10(LF_allObs[i]) - ERROR_inf[i] )
+        ERROR_sup[i] = 10**( ERROR_sup[i]+np.log10(LF_allObs[i]) ) - LF_allObs[i]
+
+    return MAG, LF_allObs, ERROR_sup, ERROR_inf, binMag
+
 def LF_fit( redshift ):
     
     magBin = np.linspace( -23, -12, 100 )

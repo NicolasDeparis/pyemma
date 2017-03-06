@@ -1028,6 +1028,7 @@ class Fof:
 
     def get_luminosity_1600( self, cur_step, model='', fesc=1 ):
         ### USE LUMINOSITY
+        ### A SUPPRIMER SI StarPopulationModel EST ACCEPTE
         from pyemma import io,time,luminosity
 
         info = io.Info(self.path+"../../../")
