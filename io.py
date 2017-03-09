@@ -212,78 +212,113 @@ class Field():
         else:
              self._read_bin(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax,zmin=zmin,zmax=zmax, force=force)
 
-    def _read1proc(self,filename):
-        with open(filename, "rb") as file:
-            N = np.fromfile(file, dtype=np.int32  ,count=1)[0]
-            if N==0:
-                 return 0,0,[],[]
-            tsim = np.fromfile(file, dtype=np.float32  ,count=1)[0]
 
-# # !!! Temporary fix !!!
-            if "grid" in filename:
+        def _getnproc(self):
+
+            self.nproc=0
+            try:
+                self.files = os.listdir(self._filename)
+                for file in self.files:
+                    if self._field[5:] in file :
+                        self.nproc += 1
+            except FileNotFoundError:
+                pass
+
+        def _getBound(self, force=False):
+            import pickle
+
+            name="%s/../procbounds"%self._filename
+            if os.path.isfile(name) and not force:
+                with open(name, 'rb') as input:
+                    self._N,self._bound = pickle.load(input)
+                return
+
+            self._N=np.zeros(self.nproc)
+            self._bound=np.empty(self.nproc,dtype=np.object)
+
+            for proc in range(self.nproc):
+
+                cur_name = "%s/%s.%05d.p%s"%(self._filename, self._field[5:] , self._stepnum, str(proc).zfill(5))
+                with open(cur_name, "rb") as file:
+
+                    N1proc = np.fromfile(file, dtype=np.int32  ,count=1)[0]
+                    self._N[proc]=N1proc
+
+                    tsim = np.fromfile(file, dtype=np.float32  ,count=1)[0]
+
+                    bound1proc= np.fromfile(file, dtype=np.float32  ,count=6)
+                    self._bound[proc]=bound1proc
+
+            with open(name, 'wb') as output:
+                pickle.dump( (self._N, self._bound) , output,-1)
+
+        def _getNobj(self):
+
+                self.Nobj=0
+
+                for proc in range(self.nproc):
+
+                    bound = self._bound[proc]
+                    bx= bound[0]>self._xmax or bound[1]<self._xmin
+                    by= bound[2]>self._ymax or bound[3]<self._ymin
+                    bz= bound[4]>self._zmax or bound[5]<self._zmin
+
+                    if bx or by or bz :
+                        continue
+                    else:
+                        self.Nobj+=self._N[proc]
+                    self.Nobj=np.uint(self.Nobj)
+
+        def _read1proc( self, filename ):
+            with open(filename, "rb") as file:
+                N = np.fromfile(file, dtype=np.int32  ,count=1)[0]
+                tsim = np.fromfile(file, dtype=np.float32  ,count=1)[0]
                 bound= np.fromfile(file, dtype=np.float32  ,count=6)
-            elif "part" in filename:
-                bound=np.array([0,1,0,1,0,1])
-            elif "star" in filename:
-                bound=np.array([0,1,0,1,0,1])
-            else:
-                print("problem in reading field")
-# # !!! end of temporary fix!!!
-
-            # bound=np.array([0,1,0,1,0,1])
-
-            bx= bound[0]>self._xmax or bound[1]<self._xmin
-            by= bound[2]>self._ymax or bound[3]<self._ymin
-            bz= bound[4]>self._zmax or bound[5]<self._zmin
-
-            if bx or by or bz :
-                return 0,tsim,bound,[]
-            else:
-                # print("reading %s "%filename)
                 data = np.fromfile(file, dtype=np.float32)
                 return N,tsim,bound,data
 
+        def _read_bin(self, xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1, force=0, bound=None, Nobj=None):
 
-    def _getnproc(self):
+            if not self._isloadded or force :
+                #print("reading %s"%self._field)
 
-        self.nproc=0
-        try:
-            self.files = os.listdir(self._filename)
-            for file in self.files:
-                if self._field[5:] in file :
-                    self.nproc += 1
-        except FileNotFoundError:
-            pass
+                self._xmin=xmin
+                self._xmax=xmax
+                self._ymin=ymin
+                self._ymax=ymax
+                self._zmin=zmin
+                self._zmax=zmax
 
-    def _read_bin(self, xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1, force=0):
+                self._getnproc()
+                self._getBound()
+                self._getNobj()
 
-        if not self._isloadded or force :
-            print("reading %s"%self._field)
+                self.data=np.zeros(self.Nobj)
 
-            self._xmin=xmin
-            self._xmax=xmax
-            self._ymin=ymin
-            self._ymax=ymax
-            self._zmin=zmin
-            self._zmax=zmax
+                skipped=0
+                curs=0
+                for proc in range(self.nproc):
+                    cur_name = "%s/%s.%05d.p%s"%(self._filename, self._field[5:] , self._stepnum, str(proc).zfill(5))
+                    if not proc%1024:
+                            print(cur_name, 1024-skipped)
+                            skipped=0
 
-            self._N=0
-            self.data=[]
-            self._bound=[]
+                    bound = self._bound[proc]
+                    bx= bound[0]>self._xmax or bound[1]<self._xmin
+                    by= bound[2]>self._ymax or bound[3]<self._ymin
+                    bz= bound[4]>self._zmax or bound[5]<self._zmin
 
-            self._getnproc()
+                    if bx or by or bz :
+                        skipped+=1
+                        continue
+                    else:
+                        N1proc,tsim,bound1proc,data1proc=self._read1proc(cur_name)
+                        np.copyto(self.data[curs:curs+N1proc],data1proc)
+                        curs+=N1proc
 
-            for proc in range(self.nproc):
-                cur_name = "%s/%s.%05d.p%s"%(self._filename, self._field[5:] , self._stepnum, str(proc).zfill(5))
-                N1proc,tsim,bound1proc,data1proc=self._read1proc(cur_name)
-                self._N+=N1proc
-                self._tsim=tsim
-                self._bound=np.append(self._bound,bound1proc)
-                self.data=np.append(self.data,data1proc)
-
-            self._isloadded=True
-        else:
-            print("%s allready loaded, use force=1 to reload"%self._field)
+                self._isloadded=True
+            else:
+                print("%s allready loaded, use force=1 to reload"%self._field)
 
 # # Parameter files
 
