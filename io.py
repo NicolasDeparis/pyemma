@@ -55,6 +55,52 @@ class Run:
                 print('no movie')
             pass
 
+    def reionizationMap( self, xionThreshold=0.5, level=None, force=0, justComputeAndSave=False ):
+        """
+        return the reionzation Map cube (of level)
+        compute the redshift when (ionization fraction < xionThreshold) for the last time
+        
+        The reshift accuracy totally depend of the snap outputed!
+       
+        if the criteria is never satisfy the cells are at -1
+        
+        justComputeAndSave: not adding the cube to the Run object, but save in the file
+        """
+        import pickle
+        
+        ### load from file is file exist
+        name = self.folder+'data/zreMap'
+        print( name )
+        if os.path.isfile(name) and not force:
+            with open(name, 'rb') as input:
+                setattr( self, 'zreMap', pickle.load(input) )
+            return
+        
+        import pyemma.grid as grid ### needed 
+        
+        if( level==None ):
+            level = np.int( self.param.info.level_min )
+      
+        N = np.int( 2**level )
+        z_re_Map  = -np.ones( (N, N, N) ) 
+        
+        for snap in self.step_list:
+            print( snap.z )
+            cube_xion = grid.get_cube(snap.grid.x.data,
+                                      snap.grid.y.data,
+                                      snap.grid.z.data,
+                                      snap.grid.l.data,
+                                      snap.grid.xion.data,
+                                      level,'3d', xmin=0.,xmax=1.,ymin=0.,ymax=1.,zmin=0.,zmax=1.)
+
+            z_re_Map [ np.where( cube_xion < xionThreshold  ) ] = snap.z
+            
+        ### save in file of the name of the type
+        with open(name, 'wb') as output:
+            pickle.dump( z_re_Map, output, -1 )
+        
+        if( not(justComputeAndSave) ):
+            self.zreMap = z_re_Map
 
 class Step:
     def __init__(self,number,folder, hdf5=True, verbose=False):

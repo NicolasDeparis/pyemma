@@ -5,8 +5,13 @@ import pickle
 # import cPickle as pickle
 import os
 from scipy import spatial
+from sklearn import neighbors as nbors ### alternative a spatial
 
-from pyemma import io
+import sys
+sys.setrecursionlimit(10000) ### BIDOUILLE pour les tree
+
+from pyemma import io, time
+import pyemma.StarPopulationModel as SPM
 
 class Fof:
 
@@ -562,22 +567,26 @@ class Fof:
         self.get_getStars(  ) ### NG : autant le mettre la, c'est plus coherent
 
     def get_part(self, force=0, fact=1., Rmin=None, Rfixe=None ):
-        ### USELESS ? do we need the DM part in the R200 !!
         self._get_Sphere( self.step.part, "part", force=force, fact=fact )
 
     def get_cells(self, force=0, fact=1., Rmin=None, Rfixe=None ):
         self._get_Sphere( self.step.grid, "cells", force=force, fact=fact )
 
-    def get_part_LSS( self, force=0, fact=1., Rmin=None, Rfixe=None ):
+    def _get_part_LSS( self, Rfixe=None, fieldName="part_LSS", force=0 ):
         """
+        function call in get_DLSS
+        
         Return DM part in a Radius Rfixe,
         Usefull to compute Large Scale Structure Overdensity
-        example R = 1 Mpc
+        example R = 1 Mpc 
+        
+        /!\ Rfixe is in BOX SIZE unit
         """
-        self._get_Sphere( self.step.part, "part_LSS", force=force, fact=1., Rmin=None, Rfixe=None,  )
+        #self._get_Sphere( self.step.part, fieldName, force=force, Rfixe=Rfixe, do_return=False )
+        self._get_Sphere_sklearn( self.step.part, fieldName, force=force, Rfixe=Rfixe, do_return=False )
     ####################################################################
 
-    def _get_Sphere( self, part, type, force=0, fact=1., Rmin=None, Rfixe=None ):
+    def _get_Sphere( self, part, type, force=0, fact=1., Rmin=None, Rfixe=None, do_return=False ):
 
         """
         get part, stars or cells in R200
@@ -587,8 +596,13 @@ class Fof:
                - fact: a multiplic factor to the R200
                - Rmin: minimum radius
                - Rfixe: imposed radius of search (NG)
+               
+               - do_return: NG test to speedup the DLSS computation
+                   => reduire la memoire
         """
 
+        #self.get_R200() ### first compute R200
+        
         name = self.path+type
         if os.path.isfile(name) and not force:
             with open(name, 'rb') as input:
@@ -610,10 +624,11 @@ class Fof:
             y+=dx
             z+=dx
 
-        tree = spatial.cKDTree( np.transpose( [x,y,z] ))
+        tree = spatial.cKDTree( np.transpose( [x,y,z] ) )
 
         n=self.nfoftot
-        part=np.empty(n, dtype=np.object)
+        
+        part = np.empty(n, dtype=np.object)
 
         comptBound = 0 ### number of halos at the border of the box
         for i in range(n):
@@ -644,6 +659,9 @@ class Fof:
             y_sign = np.sign( 0.5 - y ) ### but if r>=0.5 you are doing something nasty!
             z_sign = np.sign( 0.5 - z )
 
+            #if( x_border or y_border or z_border ):
+            #    print('iamHere')
+            
             if x_border:
                 part[i]+=tree.query_ball_point((x+x_sign,y,z), r)
             if y_border:
@@ -661,7 +679,124 @@ class Fof:
             if x_border and y_border and z_border:
                 part[i]+=tree.query_ball_point((x+x_sign,y+y_sign,z+z_sign), r)
 
+        if( do_return ):
+            return part
+        
         ### save ine file of the name of the type
+        with open(name, 'wb') as output:
+            pickle.dump(part, output,-1)
+
+        setattr( self, type, part )
+        
+        
+    def _get_Sphere_sklearn( self, part, type, force=0, fact=1., Rmin=None, Rfixe=None, do_return=False ):
+
+        """
+        get part, stars or cells in R200
+        input: - part: object part, star or cell of a step
+               - type: string = "stars", "part", "cells" or "part_LSS"
+               - force: force the computing instead of read an already compute file
+               - fact: a multiplic factor to the R200
+               - Rmin: minimum radius
+               - Rfixe: imposed radius of search (NG)
+               
+               - do_return: NG test to speedup the DLSS computation
+                   => reduire la memoire
+        """
+
+        #self.get_R200() ### first compute R200
+        
+        name = self.path+type
+        #print( name )
+        if os.path.isfile(name) and not force:
+            with open(name, 'rb') as input:
+                setattr( self, type, pickle.load(input) )
+            return
+
+        try :
+            x=part.x.data
+            y=part.y.data
+            z=part.z.data
+        except AttributeError:
+            return
+
+        if type == "cells":
+            #get the center of cells
+            dx=np.power(0.5,part.l.data+1)
+            x+=dx
+            y+=dx
+            z+=dx
+
+        tree = nbors.KDTree( np.transpose( [x,y,z] ), leaf_size=1 )
+
+        n = self.nfoftot
+        
+        xh=self.x
+        yh=self.y
+        zh=self.z
+        
+        ### classic search in R200
+        if (Rfixe is None):
+            rh=self.R200[i]*fact
+        ### force search in a fixe radius R
+        else:
+            rh=Rfixe
+        ### impose a minimum radius for the smallest halos
+        if (Rmin is not None) and (rh<Rmin) and (Rfixe is None):
+            N_halo_smaller_than_Rmin+=1
+            rh=Rmin
+            
+        part = tree.query_radius( np.transpose( [xh,yh,zh] ), r=rh )
+
+        comptBound = 0 ### number of halos at the border of the box
+        
+        ### Boundary conditions
+        x_border = (xh-rh<0) + (xh+rh>1) ### is the halo at a border ?
+        y_border = (yh-rh<0) + (yh+rh>1)
+        z_border = (zh-rh<0) + (zh+rh>1)
+
+        x_sign = np.sign( 0.5 - xh ) ### on which side of the border ? work if r<0.5 ! TODO: make it general
+        y_sign = np.sign( 0.5 - yh ) ### but if r>=0.5 you are doing something nasty!
+        z_sign = np.sign( 0.5 - zh )
+        
+        ### loop over all halos, to check for the boundary condition
+        ### TODO: find a way without loop
+        for i in range(n):
+
+            #if( x_border or y_border or z_border ):
+            #    print('iamHere')
+            
+            x=xh[i]
+            y=yh[i]
+            z=zh[i]
+            if (Rfixe is None):
+                r=rh[i]
+            else:
+                r=Rfixe
+            if (Rmin is not None) and (rh<Rmin) and (Rfixe is None):
+                r=Rmin
+            
+            if x_border[i]:
+                part[i] = np.concatenate( (part[i], tree.query_radius( np.array((x+x_sign[i], y, z)).reshape(1,-1), r)[0]) )
+            if y_border[i]:
+                part[i] = np.concatenate( (part[i], tree.query_radius( np.array((x,y+y_sign[i],z)).reshape(1,-1), r)[0]) )
+            if z_border[i]:
+                part[i] = np.concatenate( (part[i], tree.query_radius( np.array((x,y,z+z_sign[i])).reshape(1,-1), r)[0]) )
+
+            if x_border[i] and y_border[i]:
+                part[i] = np.concatenate( (part[i], tree.query_radius( np.array((x+x_sign[i],y+y_sign[i],z)).reshape(1,-1), r)[0]) )
+            if x_border[i] and z_border[i]:
+                part[i] = np.concatenate( (part[i], tree.query_radius( np.array((x+x_sign[i],y,z+z_sign[i])).reshape(1,-1), r)[0]) )
+            if y_border[i] and z_border[i]:
+                part[i] = np.concatenate( (part[i], tree.query_radius( np.array((x,y+y_sign[i],z+z_sign[i])).reshape(1,-1), r)[0]) )
+
+            if x_border[i] and y_border[i] and z_border[i]:
+                part[i] = np.concatenate( (part[i], tree.query_radius( np.array((x+x_sign[i],y+y_sign[i],z+z_sign[i])).reshape(1,-1), r)[0]) )
+
+        if( do_return ):
+            return part
+        
+        ### save in file of the name of the type
         with open(name, 'wb') as output:
             pickle.dump(part, output,-1)
 
@@ -946,16 +1081,31 @@ class Fof:
         
         # self.part_mass_fine = self.npart * unit_mass
 
-    def get_part_DLSS( self, R ):
+    def get_DLSS( self, R, fieldName="DLSS", force=0 ):
         """
         Return the Large Scale Structure Overdensity (not a mass)
-        /!\ TODO: R should be the same than in get_part_LSS !
+        
+        DM part in R shere are first computed and save in part_+fieldName
+        R should not > 0.5 boxe size => the boundary condition search may break
         """
+        
+        name = self.path + fieldName
+        if os.path.isfile(name) and not force:
+            #print("Reading %s"%name)
+            with open(name, 'rb') as input:
+                DLSS = pickle.load(input)
+                setattr( self, fieldName, DLSS )
+            return
+
+        ### part are directly computed here
+        self._get_part_LSS( Rfixe=R, fieldName='part_'+fieldName, force=force )
+        #partID = self._get_part_LSS( Rfixe=R, fieldName='part_'+fieldName, force=force )
+        
         #from pyemma import io
         info = io.Info(self.path+"../../../")
         
-        partID = self.part_LSS 
-        part_mass=np.zeros(self.nfoftot)
+        partID = getattr( self, 'part_'+fieldName )
+        part_mass = np.zeros(self.nfoftot)
         
         unit_mass = info.mass_res_DM
         
@@ -964,9 +1114,15 @@ class Fof:
         Vtot = Ltot**3 ### volume of the simulation
         V = (4./3)*np.pi * (R*Ltot)**3 ### spherical volue arround halos
         
+        unit_delta = info.mass_res_DM / V / (Mtot/Vtot)
+        
         for i in range(self.nfoftot): 
-            part_mass[i]=unit_mass*len(partID[i])     
-        selfpart_DLSS = part_mass
+            part_mass[i] = len(partID[i]) * unit_delta
+   
+        setattr( self, fieldName, part_mass )
+        #self.part_DLSS = part_mass
+        with open(name, 'wb') as output:
+            pickle.dump( part_mass, output, -1 )
     ##############################################################
 
     def get_gas_mass(self):
@@ -975,7 +1131,7 @@ class Fof:
         """
 
         grid=self.step.grid
-        from pyemma import io
+        #from pyemma import io
         info = io.Info(self.path+"../../../")
 
         self.gas_mass=np.zeros(self.nfoftot)
@@ -993,7 +1149,7 @@ class Fof:
         """
 
         grid=self.step.grid
-        from pyemma import io
+        #from pyemma import io
         info = io.Info(self.path+"../../../")
 
         self.gas_mass_fine=np.zeros(self.nfoftot)
@@ -1028,7 +1184,7 @@ class Fof:
 
     def get_luminosity_1600( self, cur_step, model='', fesc=1 ):
         ### USE LUMINOSITY
-        ### A SUPPRIMER SI StarPopulationModel EST ACCEPTE
+        ### A SUPPRIMER SI StarPopulationModel IS ACCEPTED
         from pyemma import io,time,luminosity
 
         info = io.Info(self.path+"../../../")
@@ -1047,9 +1203,10 @@ class Fof:
         self.star_flux_1600=flux_tot
         self.mag_1600=luminosity.flux2mag(flux_tot[flux_tot!=0])
         
-    def get_luminosity_1600_2( self, model=None, fesc=1 ):
+    def get_luminosity_1600_2( self, model=None, fesc=1, fine=False ):
         ### USE StarPopulationModel
-        from pyemma import io,time
+        #from pyemma import io,time
+        import pyemma.StarPopulationModel as SPM
         
         if model==None:
             import pyemma.StarPopulationModel as SPM
@@ -1066,9 +1223,15 @@ class Fof:
 
         flux_tot = np.zeros(self.nfoftot) ### Flux per halos
         for i in range(self.nfoftot):
-            flux_tot[i] = np.sum( flux[self.stars[i]] )
+            if( fine ):
+                flux_tot[i] = np.sum( flux[self.stars_fine[i]] )
+            else:
+                flux_tot[i] = np.sum( flux[self.stars[i]] )
         self.star_flux_1600 = flux_tot
-        self.mag_1600 = SPM.flux2mag( flux_tot[flux_tot!=0] )
+        if( fine ):
+            self.mag_1600_fine = SPM.flux2mag( flux_tot[flux_tot!=0] )
+        else:
+            self.mag_1600 = SPM.flux2mag( flux_tot[flux_tot!=0] )
 
     def get_ageLuminosity(self,cur_step):
         """
