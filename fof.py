@@ -1183,7 +1183,7 @@ class Fof:
             pickle.dump(self.integ_egy, output,-1)
 
     def get_luminosity_1600( self, cur_step, model='', fesc=1 ):
-        ### USE LUMINOSITY
+        ### USE luminosity.py
         ### A SUPPRIMER SI StarPopulationModel IS ACCEPTED
         from pyemma import io,time,luminosity
 
@@ -1204,7 +1204,8 @@ class Fof:
         self.mag_1600=luminosity.flux2mag(flux_tot[flux_tot!=0])
         
     def get_luminosity_1600_2( self, model=None, fesc=1, fine=False ):
-        ### USE StarPopulationModel
+        ### USE StarPopulationModel.py
+        
         #from pyemma import io,time
         import pyemma.StarPopulationModel as SPM
         
@@ -1344,25 +1345,51 @@ class Fof:
 
         import scipy.linalg
 
-        self.inertia_eig_val = np.empty(self.nfoftot, dtype=np.object)
-        self.inertia_eig_vec = np.empty(self.nfoftot, dtype=np.object)
+        #self.inertia_eig_val = np.empty(self.nfoftot, dtype=np.object)
+        #self.inertia_eig_vec = np.empty(self.nfoftot, dtype=np.object)
+        self.inertia_eig_val = np.empty( [self.nfoftot, 3], dtype=np.complex)
+        self.inertia_eig_vec = np.empty( [self.nfoftot, 3, 3], dtype=np.complex)
 
         for halo_num in range(self.nfoftot):
 
             xc =self.x[halo_num]
             yc =self.y[halo_num]
             zc =self.z[halo_num]
+            
+            #sigma_x = np.sqrt( ( (self.part_pos[halo_num][0::3] - xc)**2 ).sum() )
+            #sigma_y = np.sqrt( ( (self.part_pos[halo_num][1::3] - yc)**2 ).sum() )
+            #sigma_z = np.sqrt( ( (self.part_pos[halo_num][2::3] - zc)**2 ).sum() )
+            
+            part_x = (self.part_pos[halo_num][0::3] - xc) #/ sigma_x
+            part_y = (self.part_pos[halo_num][1::3] - yc) #/ sigma_y
+            part_z = (self.part_pos[halo_num][2::3] - zc) #/ sigma_z
+            
+            ### Boundary conditions 
+            x_border = (part_x.max()-part_x.min())>0.5 ### are halo parts at opposite box boundary ?
+            y_border = (part_y.max()-part_y.min())>0.5
+            z_border = (part_z.max()-part_z.min())>0.5
+            
+            x_sign = np.sign( xc-0.5 ) ### on which side of the border ? 
+            y_sign = np.sign( yc-0.5 ) 
+            z_sign = np.sign( zc-0.5 )
 
-            part_x = self.part_pos[halo_num][0::3] - xc
-            part_y = self.part_pos[halo_num][1::3] - yc
-            part_z = self.part_pos[halo_num][2::3] - zc
-
-            #inertia matrix
+            if x_border:
+                partOut = np.where( np.abs(part_x)>0.5 )[0]
+                part_x[partOut] = part_x[partOut] + x_sign
+            if y_border:
+                partOut = np.where( np.abs(part_y)>0.5 )[0]
+                part_y[partOut] = part_y[partOut] + y_sign
+            if z_border:
+                partOut = np.where( np.abs(part_z)>0.5 )[0]
+                part_z[partOut] = part_z[partOut] + z_sign
+                
+            ### inertia matrix
             A = [part_x, part_y, part_z]
             B = np.transpose(A)
             I = np.dot(A,B)
 
-            self.inertia_eig_val[halo_num], self.inertia_eig_vec[halo_num] = scipy.linalg.eig(I)
+            self.inertia_eig_val[halo_num, :], self.inertia_eig_vec[halo_num, :, :] = scipy.linalg.eig(I)
+            ### HALOS SIZE = np.sqrt( eig_val / npart )
 
         with open(name, 'wb') as output:
             pickle.dump(self.inertia_eig_val, output,-1)

@@ -3,12 +3,14 @@
 import os
 import numpy as np
 import h5py
+import pickle 
 
 import pyemma.fof as fof
 # import hop
 
 #import optical_depth
 import pyemma.movie as movie
+import pyemma.grid as grid ### needed 
 
 class Run:
     """
@@ -55,7 +57,7 @@ class Run:
                 print('no movie')
             pass
 
-    def reionizationMap( self, xionThreshold=0.5, level=None, force=0, justComputeAndSave=False ):
+    def get_reionizationMap( self, xionThreshold=0.5, level=None, force=0, justComputeAndSave=False ):
         """
         return the reionzation Map cube (of level)
         compute the redshift when (ionization fraction < xionThreshold) for the last time
@@ -64,19 +66,24 @@ class Run:
        
         if the criteria is never satisfy the cells are at -1
         
-        justComputeAndSave: not adding the cube to the Run object, but save in the file
+        justComputeAndSave: not adding the cube to the Run object, but save in the file => not loaded in memory
+        
+        TODO: can reionizationMap be a Class ?
         """
-        import pickle
-        
-        ### load from file is file exist
+        print( 'Simu: '+self.folder )
+        ### load from file if file exist
         name = self.folder+'data/zreMap'
-        print( name )
-        if os.path.isfile(name) and not force:
-            with open(name, 'rb') as input:
-                setattr( self, 'zreMap', pickle.load(input) )
+        if os.path.isfile(name) and not(force):
+            if(self.verbose):
+                print( 'Reading '+name )
+            if(not(justComputeAndSave)):
+                with open(name, 'rb') as input:
+                    setattr( self, 'reionizationMap', pickle.load(input) )
+            else:
+                if(self.verbose):
+                    print( 'zreMap of '+name+' already computed and save' )
             return
-        
-        import pyemma.grid as grid ### needed 
+
         
         if( level==None ):
             level = np.int( self.param.info.level_min )
@@ -85,7 +92,8 @@ class Run:
         z_re_Map  = -np.ones( (N, N, N) ) 
         
         for snap in self.step_list:
-            print( snap.z )
+            if(self.verbose):
+                print( 'Reshift %.1f'%snap.z )
             cube_xion = grid.get_cube(snap.grid.x.data,
                                       snap.grid.y.data,
                                       snap.grid.z.data,
@@ -100,7 +108,7 @@ class Run:
             pickle.dump( z_re_Map, output, -1 )
         
         if( not(justComputeAndSave) ):
-            self.zreMap = z_re_Map
+            self.reionizationMap = z_re_Map
 
 class Step:
     def __init__(self,number,folder, hdf5=True, verbose=False):
