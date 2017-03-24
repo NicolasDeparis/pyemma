@@ -1330,12 +1330,20 @@ class Fof:
 # GEOMETRY
 ####################################################################################################################
 
-    def get_inertia_tensor(self, force=False):
+    def get_halos_size( self, force=False ):
+        self.get_inertia_tensor( type="part", force=force )
+            
+    def get_galaxies_size( self, force=False ):
+        self.get_inertia_tensor( type="star", force=force )
+        
+    def get_inertia_tensor( self, type="part", force=False ):
         """
         compute inertia tensors of halos and diagonalize them
+        return the eigen-values => directly interpretable as the 1sigma distance to center
+        and the eigen-vectors
         """
-
-        name = self.path+"inertia"
+        
+        name = self.path+"inertia_"+type
         if os.path.isfile(name) and not force:
             #print("Reading %s"%name)
             with open(name, 'rb') as input:
@@ -1347,53 +1355,90 @@ class Fof:
 
         #self.inertia_eig_val = np.empty(self.nfoftot, dtype=np.object)
         #self.inertia_eig_vec = np.empty(self.nfoftot, dtype=np.object)
-        self.inertia_eig_val = np.empty( [self.nfoftot, 3], dtype=np.complex)
-        self.inertia_eig_vec = np.empty( [self.nfoftot, 3, 3], dtype=np.complex)
+        #self.inertia_eig_val = np.empty( [self.nfoftot, 3], dtype=np.complex)
+        #self.inertia_eig_vec = np.empty( [self.nfoftot, 3, 3], dtype=np.complex)
+        inertia_eig_val = np.zeros( [self.nfoftot, 3], dtype=np.complex)
+        inertia_eig_vec = np.zeros( [self.nfoftot, 3, 3], dtype=np.complex)
 
         for halo_num in range(self.nfoftot):
-
-            xc =self.x[halo_num]
-            yc =self.y[halo_num]
-            zc =self.z[halo_num]
-            
-            #sigma_x = np.sqrt( ( (self.part_pos[halo_num][0::3] - xc)**2 ).sum() )
-            #sigma_y = np.sqrt( ( (self.part_pos[halo_num][1::3] - yc)**2 ).sum() )
-            #sigma_z = np.sqrt( ( (self.part_pos[halo_num][2::3] - zc)**2 ).sum() )
-            
-            part_x = (self.part_pos[halo_num][0::3] - xc) #/ sigma_x
-            part_y = (self.part_pos[halo_num][1::3] - yc) #/ sigma_y
-            part_z = (self.part_pos[halo_num][2::3] - zc) #/ sigma_z
-            
-            ### Boundary conditions 
-            x_border = (part_x.max()-part_x.min())>0.5 ### are halo parts at opposite box boundary ?
-            y_border = (part_y.max()-part_y.min())>0.5
-            z_border = (part_z.max()-part_z.min())>0.5
-            
-            x_sign = np.sign( xc-0.5 ) ### on which side of the border ? 
-            y_sign = np.sign( yc-0.5 ) 
-            z_sign = np.sign( zc-0.5 )
-
-            if x_border:
-                partOut = np.where( np.abs(part_x)>0.5 )[0]
-                part_x[partOut] = part_x[partOut] + x_sign
-            if y_border:
-                partOut = np.where( np.abs(part_y)>0.5 )[0]
-                part_y[partOut] = part_y[partOut] + y_sign
-            if z_border:
-                partOut = np.where( np.abs(part_z)>0.5 )[0]
-                part_z[partOut] = part_z[partOut] + z_sign
+            if( (type=='part') or (type=='star' and self.getStars_fine[halo_num] and len(self.stars_fine[halo_num])>10) ):
                 
-            ### inertia matrix
-            A = [part_x, part_y, part_z]
-            B = np.transpose(A)
-            I = np.dot(A,B)
+                if(type=='part'):
+                    #weight = 1. / self.npart[halo_num] 
+                    weight = np.ones( np.int(self.npart[halo_num]) )
+                    #xc =self.x[halo_num] ### halos center 
+                    #yc =self.y[halo_num]
+                    #zc =self.z[halo_num]
+                    #part_x = (self.part_pos[halo_num][0::3] - xc)
+                    #part_y = (self.part_pos[halo_num][1::3] - yc)
+                    #part_z = (self.part_pos[halo_num][2::3] - zc)
+                    part_x = np.copy(self.part_pos[halo_num][0::3])
+                    part_y = np.copy(self.part_pos[halo_num][1::3])
+                    part_z = np.copy(self.part_pos[halo_num][2::3])
+                    
+                if( type=='star' ):
+                    #weight = self.step.star.mass.data[ self.stars_fine[halo_num] ]\
+                    #         / self.step.star.mass.data[ self.stars_fine[halo_num] ].sum()
+                    weight = self.step.star.mass.data[ self.stars_fine[halo_num] ]
+                    #    
+                    #xc = np.average( self.step.star.x.data[ self.stars_fine[halo_num] ]*weight ) ### galaxy center
+                    #yc = np.average( self.step.star.y.data[ self.stars_fine[halo_num] ]*weight ) ### NO PERIODIC BOUNDARY
+                    #part_x = (self.step.star.x.data[ self.stars_fine[halo_num] ] - xc) 
+                    #part_y = (self.step.star.y.data[ self.stars_fine[halo_num] ] - yc)
+                    #part_z = (self.step.star.z.data[ self.stars_fine[halo_num] ] - zc) 
+                    part_x = np.copy(self.step.star.x.data[ self.stars_fine[halo_num] ])
+                    part_y = np.copy(self.step.star.y.data[ self.stars_fine[halo_num] ])
+                    part_z = np.copy(self.step.star.z.data[ self.stars_fine[halo_num] ])
 
-            self.inertia_eig_val[halo_num, :], self.inertia_eig_vec[halo_num, :, :] = scipy.linalg.eig(I)
-            ### HALOS SIZE = np.sqrt( eig_val / npart )
+                ### Boundary conditions 
+                x_border = (part_x.max()-part_x.min())>0.5 ### are halo parts at opposite box boundary ?
+                y_border = (part_y.max()-part_y.min())>0.5
+                z_border = (part_z.max()-part_z.min())>0.5
 
+                #x_sign = np.sign( xc-0.5 ) ### on which side of the border ? 
+                #y_sign = np.sign( yc-0.5 ) 
+                #z_sign = np.sign( zc-0.5 )
+
+                if x_border:
+                    #partOut = np.where( np.abs(part_x-xc)>0.5 )[0]
+                    partOut = np.where( np.abs(part_x)>0.5 )[0]
+                    part_x[partOut] = part_x[partOut] -1 #+ x_sign
+                if y_border:
+                    #partOut = np.where( np.abs(part_y-yc)>0.5 )[0]
+                    partOut = np.where( np.abs(part_y)>0.5 )[0]
+                    part_y[partOut] = part_y[partOut] -1 #+ y_sign
+                if z_border:
+                    #partOut = np.where( np.abs(part_z-zc)>0.5 )[0]
+                    partOut = np.where( np.abs(part_z)>0.5 )[0]
+                    part_z[partOut] = part_z[partOut] -1 #+ z_sign
+                   
+                ### normalize positions
+                xc = np.sum( part_x*weight ) / weight.sum()
+                yc = np.sum( part_y*weight ) / weight.sum()
+                zc = np.sum( part_z*weight ) / weight.sum()
+                part_x -= xc
+                part_y -= yc
+                part_z -= zc
+                #part_x *= weight
+                #part_y *= weight
+                #part_z *= weight
+
+                ### inertia matrix
+                A = np.array([part_x, part_y, part_z])
+                B = np.transpose(A*weight) 
+                I = np.dot(A,B)
+
+                #self.inertia_eig_val[halo_num, :], self.inertia_eig_vec[halo_num, :, :] = scipy.linalg.eig(I)
+                #inertia_eig_val[halo_num, :], inertia_eig_vec[halo_num, :, :] = scipy.linalg.eig(I)
+                L, inertia_eig_vec[halo_num, :, :] = scipy.linalg.eig(I)
+                inertia_eig_val[halo_num, :] = np.sqrt( L / weight.sum() ) 
+
+        setattr( self, 'inertia_eig_val_'+type, inertia_eig_val )
+        setattr( self, 'inertia_eig_vec_'+type, inertia_eig_vec )
+                                   
         with open(name, 'wb') as output:
-            pickle.dump(self.inertia_eig_val, output,-1)
-            pickle.dump(self.inertia_eig_vec, output,-1)
+            pickle.dump( inertia_eig_val, output, -1 )
+            pickle.dump( inertia_eig_vec, output, -1 )
 
     def get_mass_center(self, cur_step, force=False):
 
