@@ -1347,8 +1347,10 @@ class Fof:
         if os.path.isfile(name) and not force:
             #print("Reading %s"%name)
             with open(name, 'rb') as input:
-                self.inertia_eig_val = pickle.load(input)
-                self.inertia_eig_vec = pickle.load(input)
+                setattr( self, 'inertia_eig_val_'+type, pickle.load(input) )
+                setattr( self, 'inertia_eig_vec_'+type, pickle.load(input) )
+                #self.inertia_eig_val = pickle.load(input)
+                #self.inertia_eig_vec = pickle.load(input)
             return
 
         import scipy.linalg
@@ -1357,7 +1359,7 @@ class Fof:
         #self.inertia_eig_vec = np.empty(self.nfoftot, dtype=np.object)
         #self.inertia_eig_val = np.empty( [self.nfoftot, 3], dtype=np.complex)
         #self.inertia_eig_vec = np.empty( [self.nfoftot, 3, 3], dtype=np.complex)
-        inertia_eig_val = np.zeros( [self.nfoftot, 3], dtype=np.complex)
+        inertia_eig_val = np.zeros( [self.nfoftot, 3], dtype=np.float32)
         inertia_eig_vec = np.zeros( [self.nfoftot, 3, 3], dtype=np.complex)
 
         for halo_num in range(self.nfoftot):
@@ -1431,7 +1433,7 @@ class Fof:
                 #self.inertia_eig_val[halo_num, :], self.inertia_eig_vec[halo_num, :, :] = scipy.linalg.eig(I)
                 #inertia_eig_val[halo_num, :], inertia_eig_vec[halo_num, :, :] = scipy.linalg.eig(I)
                 L, inertia_eig_vec[halo_num, :, :] = scipy.linalg.eig(I)
-                inertia_eig_val[halo_num, :] = np.sqrt( L / weight.sum() ) 
+                inertia_eig_val[halo_num, :] = np.sqrt( np.abs(L) / weight.sum() )
 
         setattr( self, 'inertia_eig_val_'+type, inertia_eig_val )
         setattr( self, 'inertia_eig_vec_'+type, inertia_eig_vec )
@@ -1439,6 +1441,96 @@ class Fof:
         with open(name, 'wb') as output:
             pickle.dump( inertia_eig_val, output, -1 )
             pickle.dump( inertia_eig_vec, output, -1 )
+            
+    def get_halos_radialDistribution( self, force=False ):
+        self._get_radial_distribution( type="part", force=force )
+            
+    def get_galaxies_radialDistribution( self, force=False ):
+        self._get_radial_distribution( type="star", force=force )  
+        
+    def _get_radial_distribution( self, type="part", force=False ):
+        """
+        compute inertia tensors of halos and diagonalize them
+        return the eigen-values => directly interpretable as the 1sigma distance to center
+        and the eigen-vectors
+        """
+        
+        name = self.path+"radialDistance_"+type
+        if os.path.isfile(name) and not force:
+            #print("Reading %s"%name)
+            with open(name, 'rb') as input:
+                setattr( self, 'spherical_distance_'+type, pickle.load(input) )
+                setattr( self, 'P1_distance_'+type, pickle.load(input) )
+                setattr( self, 'P2_distance_'+type, pickle.load(input) )
+                setattr( self, 'P3_distance_'+type, pickle.load(input) )
+            return
+        
+        spherical_distance = np.empty(self.nfoftot, dtype=np.object)
+        P1_distance = np.empty(self.nfoftot, dtype=np.object)
+        P2_distance = np.empty(self.nfoftot, dtype=np.object)
+        P3_distance = np.empty(self.nfoftot, dtype=np.object)
+        
+        for halo_num in range(self.nfoftot):
+            if( (type=='part') or (type=='star' and self.getStars_fine[halo_num] and len(self.stars_fine[halo_num])>10) ):
+                
+                if(type=='part'):
+                    L = self.inertia_eig_val_part[halo_num]
+                    V = self.inertia_eig_vec_part[halo_num][:,np.argsort( L )[::-1]]
+
+                    weight = np.ones( np.int(self.npart[halo_num]) )
+                    part_x = self.part_pos[halo_num][0::3]
+                    part_y = self.part_pos[halo_num][1::3]
+                    part_z = self.part_pos[halo_num][2::3]
+                    
+                if( type=='star' ):
+                    L = self.inertia_eig_val_star[halo_num]
+                    V = self.inertia_eig_vec_star[halo_num][:,np.argsort( L )[::-1]]
+                    
+                    weight = self.step.star.mass.data[ self.stars_fine[halo_num] ]
+                    part_x = np.copy(self.step.star.x.data[ self.stars_fine[halo_num] ])
+                    part_y = np.copy(self.step.star.y.data[ self.stars_fine[halo_num] ])
+                    part_z = np.copy(self.step.star.z.data[ self.stars_fine[halo_num] ])
+
+                ### Boundary conditions 
+                x_border = (part_x.max()-part_x.min())>0.5 ### are halo parts at opposite box boundary ?
+                y_border = (part_y.max()-part_y.min())>0.5
+                z_border = (part_z.max()-part_z.min())>0.5
+
+                if x_border:
+                    partOut = np.where( np.abs(part_x)>0.5 )[0]
+                    part_x[partOut] = part_x[partOut] -1 
+                if y_border:
+                    partOut = np.where( np.abs(part_y)>0.5 )[0]
+                    part_y[partOut] = part_y[partOut] -1
+                if z_border:
+                    partOut = np.where( np.abs(part_z)>0.5 )[0]
+                    part_z[partOut] = part_z[partOut] -1
+
+                ### normalize positions
+                xc = np.sum( part_x*weight ) / weight.sum()
+                yc = np.sum( part_y*weight ) / weight.sum()
+                zc = np.sum( part_z*weight ) / weight.sum()
+                part_x -= xc
+                part_y -= yc
+                part_z -= zc
+
+                ### Radial Distribution
+                spherical_distance[halo_num] = np.sqrt( part_x**2 + part_y**2 + part_z**2 ) ### spherical Radial Distribution
+
+                P1_distance[halo_num] = (V[0,0]*part_x + V[1,0]*part_y + V[2,0]*part_z).real ### 3Axes Radial Distribution
+                P2_distance[halo_num] = (V[0,1]*part_x + V[1,1]*part_y + V[2,1]*part_z).real
+                P3_distance[halo_num] = (V[0,2]*part_x + V[1,2]*part_y + V[2,2]*part_z).real
+
+        setattr( self, 'spherical_distance_'+type, spherical_distance )
+        setattr( self, 'P1_distance_'+type, P1_distance )
+        setattr( self, 'P2_distance_'+type, P2_distance )
+        setattr( self, 'P3_distance_'+type, P3_distance )
+                                   
+        with open(name, 'wb') as output:
+            pickle.dump( spherical_distance, output, -1 )
+            pickle.dump( P1_distance, output, -1 )
+            pickle.dump( P2_distance, output, -1 )
+            pickle.dump( P3_distance, output, -1 )
 
     def get_mass_center(self, cur_step, force=False):
 
